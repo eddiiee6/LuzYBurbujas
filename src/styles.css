@@ -728,6 +728,7 @@ textarea {
 }
 
 .stage-hint {
+  transition: opacity 0.4s;
   position: absolute;
   bottom: 10px;
   left: 0;
@@ -1229,8 +1230,52 @@ textarea {
 
 @media (max-width: 960px) {
   .editor-grid {
-    grid-template-columns: 1fr;
+    grid-template-columns: minmax(0, 1fr);
   }
+  /* En celular la vista previa va arriba y se queda fija al ajustar. */
+  .editor-preview {
+    order: -1;
+    top: 70px;
+    z-index: 5;
+    width: min(100%, 300px);
+    justify-self: center;
+  }
+}
+
+.afit {
+  display: grid;
+  gap: 12px;
+  margin: 0;
+  padding: 14px;
+  border: 2px dashed var(--lav-300);
+  border-radius: 16px;
+  background: var(--pink-50);
+}
+
+.afit legend {
+  padding: 0 6px;
+  font-weight: 600;
+  color: var(--purple);
+}
+
+.aslider {
+  display: grid;
+  gap: 4px;
+}
+
+.aslider span {
+  display: flex;
+  gap: 8px;
+  align-items: baseline;
+}
+
+.aslider b {
+  color: var(--pink-600);
+}
+
+.aslider input {
+  width: 100%;
+  accent-color: var(--purple);
 }
 
 .editor-preview {

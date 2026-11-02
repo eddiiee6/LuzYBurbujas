@@ -1,5 +1,6 @@
 import { useState, type ReactNode } from 'react';
 import { repo } from '../data/repo';
+import { prepareCutout } from '../lib/image';
 
 export function Field({ label, hint, children }: { label: string; hint?: ReactNode; children: ReactNode }) {
   return (
@@ -64,7 +65,15 @@ export function ColorInput({ value, onChange }: { value: string; onChange: (v: s
   );
 }
 
-export function PhotoInput({ value, name, onChange }: { value?: string; name: string; onChange: (v: string | undefined) => void }) {
+export function PhotoInput({
+  value,
+  name,
+  onChange,
+}: {
+  value?: string;
+  name: string;
+  onChange: (v: string | undefined, aspect?: number) => void;
+}) {
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState<string | null>(null);
   return (
@@ -83,7 +92,8 @@ export function PhotoInput({ value, name, onChange }: { value?: string; name: st
               setBusy(true);
               setErr(null);
               try {
-                onChange(await repo.uploadImage(f, name));
+                const { blob, aspect } = await prepareCutout(f);
+                onChange(await repo.uploadImage(blob, name), aspect);
               } catch (x) {
                 setErr(x instanceof Error ? x.message : 'No se pudo subir');
               } finally {
@@ -111,3 +121,38 @@ export const slugify = (s: string) =>
     .replace(/[̀-ͯ]/g, '')
     .replace(/[^a-z0-9]+/g, '-')
     .replace(/^-|-$/g, '');
+
+/** Deslizador con valor visible y botón para volver al valor normal. */
+export function Slider({
+  label,
+  value,
+  min,
+  max,
+  step,
+  def,
+  format = (v) => String(v),
+  onChange,
+}: {
+  label: string;
+  value: number;
+  min: number;
+  max: number;
+  step: number;
+  def: number;
+  format?: (v: number) => string;
+  onChange: (v: number) => void;
+}) {
+  return (
+    <label className="aslider">
+      <span>
+        {label} <b>{format(value)}</b>
+        {value !== def && (
+          <button type="button" className="link-btn" onClick={() => onChange(def)}>
+            normal
+          </button>
+        )}
+      </span>
+      <input type="range" min={min} max={max} step={step} value={value} onChange={(e) => onChange(Number(e.target.value))} />
+    </label>
+  );
+}

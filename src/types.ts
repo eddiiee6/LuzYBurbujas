@@ -32,12 +32,37 @@ export interface Mold {
   defaultColorId: string;
   /** Foto sin fondo (PNG/WebP transparente), idealmente del molde en blanco. */
   photo?: string;
+  /** Proporción alto/ancho de la foto (se calcula al subirla). */
+  photoAspect?: number;
+  /** Ajuste fino de la foto: tamaño (1 = ancho real) y desplazamiento vertical. */
+  photoFit?: MoldPhotoFit;
   /** Si la foto es clara, el sitio la puede teñir del color elegido. */
   photoTintable?: boolean;
   active: boolean;
   featured?: boolean;
   order: number;
 }
+
+export interface MoldPhotoFit {
+  /** 1 = la foto mide el ancho real del molde. */
+  scale: number;
+  /** Unidades hacia abajo (+) o hacia arriba (-). */
+  offsetY: number;
+}
+
+export interface PlatePhotoFit {
+  /** 1 = la foto mide el largo real de la placa. */
+  scale: number;
+  /** Dónde se apoya el producto respecto al centro de la foto (+ abajo). */
+  seatY: number;
+  /** Giro en grados para enderezar la placa. */
+  rotate: number;
+  /** Aplastar (<1) o estirar (>1) en vertical para igualar la inclinación. */
+  squash: number;
+}
+
+export const DEFAULT_MOLD_FIT: MoldPhotoFit = { scale: 1, offsetY: 0 };
+export const DEFAULT_PLATE_FIT: PlatePhotoFit = { scale: 1, seatY: 0, rotate: 0, squash: 1 };
 
 export type PlateShape = 'ovalada' | 'redonda' | 'rectangular' | 'cesta';
 /** plana: el producto se apoya encima. contenedor: la cera va dentro (solo velas). */
@@ -58,6 +83,9 @@ export interface Plate {
   veinColors: string[];
   /** Foto sin fondo de la placa (opcional). */
   photo?: string;
+  photoAspect?: number;
+  /** Ajuste fino de la foto para que coincida con el ángulo de los moldes. */
+  photoFit?: PlatePhotoFit;
   /** Moldes que no caben aunque las medidas digan que sí. */
   blockedMoldIds: string[];
   active: boolean;

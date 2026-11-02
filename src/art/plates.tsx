@@ -1,5 +1,5 @@
 import type { ReactNode } from 'react';
-import type { Plate } from '../types';
+import { DEFAULT_PLATE_FIT, type Plate } from '../types';
 import { darken, lighten, mix, seeded } from '../lib/color';
 
 /** Escala del escenario: píxeles (del viewBox) por centímetro real. */
@@ -169,11 +169,19 @@ function basket(plate: Plate, vein: string, wax: string, uid: string): PlateRend
 }
 
 function photoPlate(plate: Plate): PlateRender {
-  const w = plate.lengthCm * PX_PER_CM * 1.08;
+  // La foto viene recortada al borde de la placa: su ancho es el largo real.
+  const fit = { ...DEFAULT_PLATE_FIT, ...plate.photoFit };
+  const w = plate.lengthCm * PX_PER_CM * fit.scale;
+  const h = w * (plate.photoAspect ?? 0.5) * fit.squash;
   return {
-    seatY: 0,
+    seatY: fit.seatY,
     productScale: plate.kind === 'contenedor' ? 0.85 : 1,
-    back: <image href={plate.photo} x={-w / 2} y={-w / 2} width={w} height={w} preserveAspectRatio="xMidYMid meet" />,
+    back: (
+      <g transform={`rotate(${fit.rotate})`}>
+        <ellipse cx={6} cy={h * 0.35} rx={w / 2 + 6} ry={h * 0.4} fill="#5b3a2e" opacity={0.18} filter="url(#shadow-blur)" />
+        <image href={plate.photo} x={-w / 2} y={-h / 2} width={w} height={h} preserveAspectRatio="none" />
+      </g>
+    ),
   };
 }
 
