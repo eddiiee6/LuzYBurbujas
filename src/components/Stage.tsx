@@ -32,7 +32,10 @@ export const Stage = forwardRef<SVGSVGElement, StageProps>(function Stage(
   ref,
 ) {
   const uid = useId().replace(/:/g, '');
-  const spec = moldArt[mold.art];
+  const art = moldArt[mold.art];
+  // Con foto: el ancho de la foto es el ancho real del molde y el alto sale de su proporción.
+  const photoH = 100 * (mold.photoAspect ?? 1);
+  const spec = mold.photo ? { ...art, height: photoH, footY: 18 } : art;
   const scale = (mold.baseWidthCm * PX_PER_CM) / 100;
   const pr = plate ? renderPlate(plate, veinColor ?? plate.veinColors[0] ?? '#f29bb8', color, `${uid}p`) : null;
   const pScale = scale * (pr?.productScale ?? 1);
@@ -56,10 +59,10 @@ export const Stage = forwardRef<SVGSVGElement, StageProps>(function Stage(
       <image
         href={mold.photo}
         x={-50}
-        y={-150}
+        y={-photoH}
         width={100}
-        height={150}
-        preserveAspectRatio="xMidYMax meet"
+        height={photoH}
+        preserveAspectRatio="none"
         filter={mold.photoTintable ? `url(#${uid}-tint)` : undefined}
       />
     </g>
@@ -128,7 +131,7 @@ export const Stage = forwardRef<SVGSVGElement, StageProps>(function Stage(
         </g>
       )}
 
-      {lit && type === 'vela' && <circle cx={CX} cy={productY - spec.height * pScale} r={120} fill={`url(#${uid}-glow)`} />}
+      {lit && type === 'vela' && !mold.photo && <circle cx={CX} cy={productY - spec.height * pScale} r={120} fill={`url(#${uid}-glow)`} />}
 
       <g transform={`translate(${CX + dragPlate} ${SEAT})`}>
         <g key={plateAnim} className={plateAnim ? 'anim-pop' : undefined}>
@@ -138,11 +141,12 @@ export const Stage = forwardRef<SVGSVGElement, StageProps>(function Stage(
 
       <g transform={`translate(${CX + dragMold} ${productY})`}>
         <g key={moldAnim} className={moldAnim ? 'anim-drop' : undefined}>
-          {!plate && !bare && <ellipse cx={4} cy={-spec.footY * pScale + 30 * pScale} rx={52 * pScale} ry={14 * pScale} fill="#5b3a2e" opacity={0.2} filter="url(#shadow-blur)" />}
+          {!plate && !bare && <ellipse cx={4} cy={-10 * pScale} rx={54 * pScale} ry={13 * pScale} fill="#5b3a2e" opacity={0.2} filter="url(#shadow-blur)" />}
           <g transform={`scale(${pScale})`}>
             {product}
-            {type === 'vela' && (
-              <g transform={`translate(0 ${mold.photo ? -150 : spec.wickY})`}>
+            {/* La foto real ya trae su mecha; solo se dibuja en las ilustraciones. */}
+            {type === 'vela' && !mold.photo && (
+              <g transform={`translate(0 ${spec.wickY})`}>
                 <path d="M0,0 q-1.5,-6 1,-12" stroke="#3b2a24" strokeWidth={2.4 / Math.max(pScale, 0.5)} fill="none" strokeLinecap="round" />
                 {lit && (
                   <g className="flame" transform="translate(1 -12)">

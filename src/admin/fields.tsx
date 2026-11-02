@@ -1,5 +1,6 @@
 import { useState, type ReactNode } from 'react';
 import { repo } from '../data/repo';
+import { prepareCutout } from '../lib/image';
 
 export function Field({ label, hint, children }: { label: string; hint?: ReactNode; children: ReactNode }) {
   return (
@@ -64,7 +65,15 @@ export function ColorInput({ value, onChange }: { value: string; onChange: (v: s
   );
 }
 
-export function PhotoInput({ value, name, onChange }: { value?: string; name: string; onChange: (v: string | undefined) => void }) {
+export function PhotoInput({
+  value,
+  name,
+  onChange,
+}: {
+  value?: string;
+  name: string;
+  onChange: (v: string | undefined, aspect?: number) => void;
+}) {
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState<string | null>(null);
   return (
@@ -83,7 +92,8 @@ export function PhotoInput({ value, name, onChange }: { value?: string; name: st
               setBusy(true);
               setErr(null);
               try {
-                onChange(await repo.uploadImage(f, name));
+                const { blob, aspect } = await prepareCutout(f);
+                onChange(await repo.uploadImage(blob, name), aspect);
               } catch (x) {
                 setErr(x instanceof Error ? x.message : 'No se pudo subir');
               } finally {

@@ -32,6 +32,8 @@ export interface Mold {
   defaultColorId: string;
   /** Foto sin fondo (PNG/WebP transparente), idealmente del molde en blanco. */
   photo?: string;
+  /** Proporción alto/ancho de la foto (se calcula al subirla). */
+  photoAspect?: number;
   /** Si la foto es clara, el sitio la puede teñir del color elegido. */
   photoTintable?: boolean;
   active: boolean;
@@ -58,6 +60,7 @@ export interface Plate {
   veinColors: string[];
   /** Foto sin fondo de la placa (opcional). */
   photo?: string;
+  photoAspect?: number;
   /** Moldes que no caben aunque las medidas digan que sí. */
   blockedMoldIds: string[];
   active: boolean;
