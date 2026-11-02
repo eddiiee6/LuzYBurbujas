@@ -65,7 +65,7 @@ export function MoldEditor({ item, set, catalog }: Ed<Mold>) {
           />
         </Field>
         <Field label="Foto sin fondo" hint="PNG o WebP transparente, tomada de frente y un poco desde arriba.">
-          <PhotoInput value={item.photo} name={item.slug} onChange={(photo) => set({ photo })} />
+          <PhotoInput value={item.photo} name={item.slug} onChange={(photo, photoAspect) => set({ photo, photoAspect })} />
         </Field>
         <Check
           label="Teñir la foto con el color elegido (la foto debe ser blanca o muy clara)"
@@ -165,7 +165,7 @@ export function PlateEditor({ item, set, catalog }: Ed<Plate>) {
           </div>
         </Field>
         <Field label="Foto sin fondo (opcional)" hint="Si no hay foto, el sitio dibuja la placa con vetas.">
-          <PhotoInput value={item.photo} name={item.id} onChange={(photo) => set({ photo })} />
+          <PhotoInput value={item.photo} name={item.id} onChange={(photo, photoAspect) => set({ photo, photoAspect })} />
         </Field>
         <Field label="¿Qué moldes caben?" hint="Se calcula con las medidas. Desmarca los que no caben aunque las medidas digan que sí.">
           <div className="fit-list">

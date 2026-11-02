@@ -175,7 +175,7 @@ export default function Customizer() {
             <span>⇆ desliza arriba para cambiar el molde</span>
             <span>⇆ desliza abajo para cambiar la placa</span>
           </div>
-          {type === 'vela' && (
+          {type === 'vela' && !mold.photo && (
             <button type="button" className="lit-toggle" onClick={() => setLit(!lit)} onPointerDown={(e) => e.stopPropagation()}>
               {lit ? '🕯️ Apagar' : '🔥 Encender'}
             </button>

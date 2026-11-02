@@ -1,6 +1,7 @@
 import { createClient, type SupabaseClient } from '@supabase/supabase-js';
 import type { Catalog, EntityKind, Settings } from '../types';
 import { seedCatalog } from './seed';
+import { blobToDataUrl } from '../lib/image';
 
 /**
  * Capa de datos. El resto del sitio solo habla con esta interfaz, así que da
@@ -56,17 +57,6 @@ function writeLocal(catalog: Catalog) {
   }
 }
 
-/** Reduce la imagen y la convierte a WebP para que no pese tanto. */
-async function blobToCompressedDataUrl(file: Blob, max = 700): Promise<string> {
-  const bmp = await createImageBitmap(file);
-  const scale = Math.min(1, max / Math.max(bmp.width, bmp.height));
-  const canvas = document.createElement('canvas');
-  canvas.width = Math.round(bmp.width * scale);
-  canvas.height = Math.round(bmp.height * scale);
-  canvas.getContext('2d')!.drawImage(bmp, 0, 0, canvas.width, canvas.height);
-  return canvas.toDataURL('image/webp', 0.85);
-}
-
 const localRepo: Repo = {
   mode: 'local',
   async load() {
@@ -94,7 +84,7 @@ const localRepo: Repo = {
     writeLocal(catalog);
   },
   async uploadImage(file) {
-    return blobToCompressedDataUrl(file);
+    return blobToDataUrl(file);
   },
   async getUser() {
     return 'modo-local';
