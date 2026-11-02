@@ -1,7 +1,7 @@
 import { useEffect, useState, type ReactNode } from 'react';
 import { Link } from 'react-router-dom';
 import { useCatalog } from '../data/CatalogContext';
-import { normalize, repo } from '../data/repo';
+import { friendlyError, parseBackup, repo, uploadEmbeddedPhotos } from '../data/repo';
 import { seedCatalog } from '../data/seed';
 import type { Catalog, EntityKind, Settings } from '../types';
 import { CollectionEditor, ColorEditor, EssenceEditor, MoldEditor, PlateEditor } from './editors';
@@ -130,7 +130,7 @@ function Panel({ user, onSignOut }: { user: string; onSignOut: () => void }) {
             <span className="pill warn">Modo local: los cambios se guardan solo en este navegador</span>
           ) : (
             <>
-              <span className="pill">{user}</span>
+              <span className="pill ok">✓ Conectado a la base de datos · {user}</span>
               <button type="button" className="link-btn" onClick={onSignOut}>
                 Salir
               </button>
@@ -172,7 +172,7 @@ function ListEditor({ kind, catalog, onSaved }: { kind: EntityKind; catalog: Cat
       await onSaved();
       setMsg('✓ Guardado');
     } catch (e) {
-      setMsg(e instanceof Error ? e.message : 'No se pudo guardar');
+      setMsg('⚠️ ' + friendlyError(e));
     }
   };
   const remove = async () => {
@@ -183,7 +183,7 @@ function ListEditor({ kind, catalog, onSaved }: { kind: EntityKind; catalog: Cat
       setDraft(null);
       setMsg('Eliminado');
     } catch (e) {
-      setMsg(e instanceof Error ? e.message : 'No se pudo eliminar');
+      setMsg('⚠️ ' + friendlyError(e));
     }
   };
 
@@ -297,7 +297,7 @@ function SettingsForm({ settings, onSaved }: { settings: Settings; onSaved: () =
               await onSaved();
               setMsg('✓ Guardado');
             } catch (e) {
-              setMsg(e instanceof Error ? e.message : 'No se pudo guardar');
+              setMsg('⚠️ ' + friendlyError(e));
             }
           }}
         >
@@ -311,13 +311,17 @@ function SettingsForm({ settings, onSaved }: { settings: Settings; onSaved: () =
 
 function Backup({ catalog, onDone }: { catalog: Catalog; onDone: () => Promise<void> }) {
   const [msg, setMsg] = useState<string | null>(null);
+  const [busy, setBusy] = useState(false);
   const run = async (fn: () => Promise<void>, ok: string) => {
+    setBusy(true);
     try {
       await fn();
       await onDone();
       setMsg(ok);
     } catch (e) {
-      setMsg(e instanceof Error ? e.message : 'Algo salió mal');
+      setMsg('⚠️ ' + friendlyError(e));
+    } finally {
+      setBusy(false);
     }
   };
   return (
@@ -341,19 +345,26 @@ function Backup({ catalog, onDone }: { catalog: Catalog; onDone: () => Promise<v
           ⬆︎ Restaurar respaldo
           <input
             type="file"
-            accept="application/json"
+            accept=".json,application/json"
             hidden
+            disabled={busy}
             onChange={async (e) => {
               const f = e.target.files?.[0];
-              if (!f || !confirm('Esto reemplaza TODO el catálogo actual. ¿Continuar?')) return;
-              await run(async () => repo.replaceAll(normalize(JSON.parse(await f.text()) as Catalog)), '✓ Catálogo restaurado');
               e.target.value = '';
+              if (!f || !confirm('Esto reemplaza TODO el catálogo actual. ¿Continuar?')) return;
+              await run(async () => {
+                const c = parseBackup(await f.text());
+                await uploadEmbeddedPhotos(c, (done, total) => total && setMsg(`Subiendo fotos… ${done} de ${total}`));
+                setMsg('Guardando catálogo…');
+                await repo.replaceAll(c);
+              }, '✓ Catálogo restaurado');
             }}
           />
         </label>
         <button
           type="button"
           className="btn ghost danger"
+          disabled={busy}
           onClick={() =>
             confirm('¿Volver al catálogo inicial? Se pierden los cambios.') &&
             run(() => repo.replaceAll(structuredClone(seedCatalog)), '✓ Catálogo inicial cargado')

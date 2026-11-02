@@ -1,6 +1,6 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useState, type ReactNode } from 'react';
 import type { Catalog } from '../types';
-import { normalize, repo } from './repo';
+import { friendlyError, normalize, repo } from './repo';
 import { seedCatalog } from './seed';
 
 interface CatalogState {
@@ -22,7 +22,7 @@ export function CatalogProvider({ children }: { children: ReactNode }) {
       setCatalog(normalize(await repo.load()));
       setError(null);
     } catch (e) {
-      setError(e instanceof Error ? e.message : 'No se pudo cargar el catálogo');
+      setError(friendlyError(e));
     } finally {
       setLoading(false);
     }

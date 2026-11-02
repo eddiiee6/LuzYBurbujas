@@ -1146,6 +1146,11 @@ textarea {
   font-size: 0.85rem;
 }
 
+.pill.ok {
+  background: #e3f5e8;
+  color: #23633a;
+}
+
 .pill.warn {
   background: #fff3d9;
   color: #8a5a00;
