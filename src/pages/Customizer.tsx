@@ -35,6 +35,23 @@ export default function Customizer() {
   const essence = look.essence.get(params.get('esencia') ?? '') ?? null;
 
   const [lit, setLit] = useState(true);
+  // El texto de "desliza…" se oculta después de la primera vez que se usa.
+  const [hintSeen, setHintSeen] = useState(() => {
+    try {
+      return localStorage.getItem('lyb.hint') === '1';
+    } catch {
+      return false;
+    }
+  });
+  const markHint = () => {
+    if (hintSeen) return;
+    setHintSeen(true);
+    try {
+      localStorage.setItem('lyb.hint', '1');
+    } catch {
+      /* sin almacenamiento */
+    }
+  };
   const [qty, setQty] = useState(1);
   const [added, setAdded] = useState(false);
   const [drag, setDrag] = useState<{ zone: 'mold' | 'plate'; startX: number; dx: number } | null>(null);
@@ -73,6 +90,7 @@ export default function Customizer() {
   const theme = look.collection.get(mold.collectionId)?.theme;
 
   const stepMold = (dir: 1 | -1) => {
+    markHint();
     const i = molds.indexOf(mold);
     const m = molds[(i + dir + molds.length) % molds.length];
     const t = availableTypes(m).includes(type) ? type : availableTypes(m)[0];
@@ -80,6 +98,7 @@ export default function Customizer() {
     setAnim((a) => ({ ...a, mold: a.mold + 1 }));
   };
   const stepPlate = (dir: 1 | -1) => {
+    markHint();
     const i = plateOptions.indexOf(plate);
     const p = plateOptions[(i + dir + plateOptions.length) % plateOptions.length];
     update({ placa: p ? p.id : 'ninguna', veta: null });
@@ -171,7 +190,7 @@ export default function Customizer() {
             dragPlate={drag?.zone === 'plate' ? drag.dx : 0}
           />
           {!fit.ok && <div className="stage-badge">🚫 {fit.reason}</div>}
-          <div className="stage-hint" aria-hidden>
+          <div className="stage-hint" aria-hidden style={hintSeen ? { opacity: 0 } : undefined}>
             <span>⇆ desliza arriba para cambiar el molde</span>
             <span>⇆ desliza abajo para cambiar la placa</span>
           </div>
