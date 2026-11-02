@@ -1,7 +1,9 @@
-import type { Catalog, Collection, ColorOption, Essence, Mold, MoldArt, Plate } from '../types';
+import { DEFAULT_MOLD_FIT, DEFAULT_PLATE_FIT, type Catalog, type Collection, type ColorOption, type Essence, type Mold, type MoldArt, type Plate } from '../types';
 import { Stage } from '../components/Stage';
 import { plateFits } from '../lib/rules';
-import { Check, ColorInput, Field, Num, PhotoInput, Select, Text, slugify } from './fields';
+import { Check, ColorInput, Field, Num, PhotoInput, Select, Slider, Text, slugify } from './fields';
+
+const pct = (v: number) => `${Math.round(v * 100)}%`;
 
 type Ed<T> = { item: T; set: (patch: Partial<T>) => void; catalog: Catalog };
 
@@ -67,6 +69,31 @@ export function MoldEditor({ item, set, catalog }: Ed<Mold>) {
         <Field label="Foto sin fondo" hint="PNG o WebP transparente, tomada de frente y un poco desde arriba.">
           <PhotoInput value={item.photo} name={item.slug} onChange={(photo, photoAspect) => set({ photo, photoAspect })} />
         </Field>
+        {item.photo && (
+          <fieldset className="afit">
+            <legend>Ajuste de la foto</legend>
+            <small>Mueve hasta que se vea bien apoyado en la placa de la vista previa.</small>
+            <Slider
+              label="Tamaño"
+              value={(item.photoFit ?? DEFAULT_MOLD_FIT).scale}
+              min={0.5}
+              max={1.8}
+              step={0.01}
+              def={1}
+              format={pct}
+              onChange={(scale) => set({ photoFit: { ...DEFAULT_MOLD_FIT, ...item.photoFit, scale } })}
+            />
+            <Slider
+              label="Subir / bajar"
+              value={(item.photoFit ?? DEFAULT_MOLD_FIT).offsetY}
+              min={-40}
+              max={40}
+              step={1}
+              def={0}
+              onChange={(offsetY) => set({ photoFit: { ...DEFAULT_MOLD_FIT, ...item.photoFit, offsetY } })}
+            />
+          </fieldset>
+        )}
         <Check
           label="Teñir la foto con el color elegido (la foto debe ser blanca o muy clara)"
           value={!!item.photoTintable}
@@ -88,6 +115,8 @@ export function MoldEditor({ item, set, catalog }: Ed<Mold>) {
 }
 
 export function PlateEditor({ item, set, catalog }: Ed<Plate>) {
+  const fit = { ...DEFAULT_PLATE_FIT, ...item.photoFit };
+  const setFit = (patch: Partial<typeof fit>) => set({ photoFit: { ...fit, ...patch } });
   const mold = catalog.molds.find((m) => m.active) ?? catalog.molds[0];
   const color = catalog.colors.find((c) => c.id === mold?.defaultColorId)?.hex ?? '#f5a3c0';
   return (
@@ -167,6 +196,34 @@ export function PlateEditor({ item, set, catalog }: Ed<Plate>) {
         <Field label="Foto sin fondo (opcional)" hint="Si no hay foto, el sitio dibuja la placa con vetas.">
           <PhotoInput value={item.photo} name={item.id} onChange={(photo, photoAspect) => set({ photo, photoAspect })} />
         </Field>
+        {item.photo && (
+          <fieldset className="afit">
+            <legend>Ajuste de la foto</legend>
+            <small>Endereza la placa y elige dónde se apoya el producto. Mira la vista previa.</small>
+            <Slider
+              label="Tamaño"
+              value={fit.scale}
+              min={0.5}
+              max={1.8}
+              step={0.01}
+              def={1}
+              format={pct}
+              onChange={(scale) => setFit({ scale })}
+            />
+            <Slider label="Girar" value={fit.rotate} min={-30} max={30} step={0.5} def={0} format={(v) => `${v}°`} onChange={(rotate) => setFit({ rotate })} />
+            <Slider
+              label="Inclinación (aplastar / estirar)"
+              value={fit.squash}
+              min={0.4}
+              max={1.6}
+              step={0.01}
+              def={1}
+              format={pct}
+              onChange={(squash) => setFit({ squash })}
+            />
+            <Slider label="Punto de apoyo (arriba / abajo)" value={fit.seatY} min={-60} max={60} step={1} def={0} onChange={(seatY) => setFit({ seatY })} />
+          </fieldset>
+        )}
         <Field label="¿Qué moldes caben?" hint="Se calcula con las medidas. Desmarca los que no caben aunque las medidas digan que sí.">
           <div className="fit-list">
             {catalog.molds.map((m) => {

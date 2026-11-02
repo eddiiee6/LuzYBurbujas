@@ -121,3 +121,38 @@ export const slugify = (s: string) =>
     .replace(/[̀-ͯ]/g, '')
     .replace(/[^a-z0-9]+/g, '-')
     .replace(/^-|-$/g, '');
+
+/** Deslizador con valor visible y botón para volver al valor normal. */
+export function Slider({
+  label,
+  value,
+  min,
+  max,
+  step,
+  def,
+  format = (v) => String(v),
+  onChange,
+}: {
+  label: string;
+  value: number;
+  min: number;
+  max: number;
+  step: number;
+  def: number;
+  format?: (v: number) => string;
+  onChange: (v: number) => void;
+}) {
+  return (
+    <label className="aslider">
+      <span>
+        {label} <b>{format(value)}</b>
+        {value !== def && (
+          <button type="button" className="link-btn" onClick={() => onChange(def)}>
+            normal
+          </button>
+        )}
+      </span>
+      <input type="range" min={min} max={max} step={step} value={value} onChange={(e) => onChange(Number(e.target.value))} />
+    </label>
+  );
+}

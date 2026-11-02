@@ -1,5 +1,5 @@
 import { forwardRef, useId } from 'react';
-import type { Collection, Mold, Plate, ProductType } from '../types';
+import { DEFAULT_MOLD_FIT, type Collection, type Mold, type Plate, type ProductType } from '../types';
 import { moldArt } from '../art/molds';
 import { PX_PER_CM, renderPlate } from '../art/plates';
 import { lighten, mix, tintMatrix } from '../lib/color';
@@ -34,8 +34,10 @@ export const Stage = forwardRef<SVGSVGElement, StageProps>(function Stage(
   const uid = useId().replace(/:/g, '');
   const art = moldArt[mold.art];
   // Con foto: el ancho de la foto es el ancho real del molde y el alto sale de su proporción.
-  const photoH = 100 * (mold.photoAspect ?? 1);
-  const spec = mold.photo ? { ...art, height: photoH, footY: 18 } : art;
+  const fit = { ...DEFAULT_MOLD_FIT, ...mold.photoFit };
+  const photoW = 100 * fit.scale;
+  const photoH = photoW * (mold.photoAspect ?? 1);
+  const spec = mold.photo ? { ...art, height: photoH - fit.offsetY, footY: 18 } : art;
   const scale = (mold.baseWidthCm * PX_PER_CM) / 100;
   const pr = plate ? renderPlate(plate, veinColor ?? plate.veinColors[0] ?? '#f29bb8', color, `${uid}p`) : null;
   const pScale = scale * (pr?.productScale ?? 1);
@@ -58,9 +60,9 @@ export const Stage = forwardRef<SVGSVGElement, StageProps>(function Stage(
       )}
       <image
         href={mold.photo}
-        x={-50}
-        y={-photoH}
-        width={100}
+        x={-photoW / 2}
+        y={-photoH + fit.offsetY}
+        width={photoW}
         height={photoH}
         preserveAspectRatio="none"
         filter={mold.photoTintable ? `url(#${uid}-tint)` : undefined}
