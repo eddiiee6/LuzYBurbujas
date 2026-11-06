@@ -58,6 +58,7 @@ export default function CatalogPage() {
             .filter((p) => p.active)
             .map((p) => (
               <li key={p.id} className="card">
+                {p.photo && <img className="plate-photo" src={p.photo} alt={p.name} loading="lazy" />}
                 <b>{p.name}</b>
                 <span>
                   {p.lengthCm} × {p.widthCm} cm · {p.kind === 'contenedor' ? 'contenedor (solo velas)' : 'plana'}
