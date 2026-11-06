@@ -1,5 +1,5 @@
 import type { ReactNode } from 'react';
-import { DEFAULT_PLATE_FIT, type Plate } from '../types';
+import { DEFAULT_PLATE_FIT, DEFAULT_WAX, type Plate } from '../types';
 import { darken, lighten, mix, seeded } from '../lib/color';
 import { ColorizeFilter } from './ColorizeFilter';
 
@@ -169,12 +169,36 @@ function basket(plate: Plate, vein: string, wax: string, uid: string): PlateRend
   };
 }
 
-function photoPlate(plate: Plate, uid: string, tint?: string | null): PlateRender {
+/** Superficie de cera vista en perspectiva, con brillo y orilla. */
+function WaxSurface({ rx, ry, color, uid }: { rx: number; ry: number; color: string; uid: string }) {
+  return (
+    <g>
+      <defs>
+        <radialGradient id={`${uid}-wax`} cx="0.42" cy="0.38" r="0.75">
+          <stop offset="0" stopColor={lighten(color, 0.5)} />
+          <stop offset="0.7" stopColor={lighten(color, 0.22)} />
+          <stop offset="1" stopColor={mix(color, '#7a5a4a', 0.15)} />
+        </radialGradient>
+      </defs>
+      {/* sombra interior en la pared trasera */}
+      <ellipse rx={rx} ry={ry} fill={darken(color, 0.25)} opacity={0.35} />
+      <ellipse cy={ry * 0.12} rx={rx * 0.985} ry={ry * 0.9} fill={`url(#${uid}-wax)`} />
+      {/* reflejo suave de la luz */}
+      <ellipse cx={-rx * 0.28} cy={-ry * 0.2} rx={rx * 0.35} ry={ry * 0.22} fill="#ffffff" opacity={0.22} filter="url(#soft-blur)" />
+    </g>
+  );
+}
+
+function photoPlate(plate: Plate, uid: string, tint?: string | null, wax?: string): PlateRender {
   const recolor = !!tint && !!plate.photoTintable;
   // La foto viene recortada al borde de la placa: su ancho es el largo real.
   const fit = { ...DEFAULT_PLATE_FIT, ...plate.photoFit };
   const w = plate.lengthCm * PX_PER_CM * fit.scale;
   const h = w * (plate.photoAspect ?? 0.5) * fit.squash;
+  // Contenedor: se dibuja la cera dentro para que no se vea vacío.
+  const waxOn = (fit.waxOn ?? plate.kind === 'contenedor') && !!wax;
+  const wx = { ...DEFAULT_WAX, ...plate.photoFit };
+  const waxRx = (w * wx.waxWidth) / 2;
   return {
     seatY: fit.seatY,
     productScale: plate.kind === 'contenedor' ? 0.85 : 1,
@@ -191,13 +215,18 @@ function photoPlate(plate: Plate, uid: string, tint?: string | null): PlateRende
           preserveAspectRatio="none"
           filter={recolor ? `url(#${uid}-tint)` : undefined}
         />
+        {waxOn && (
+          <g transform={`translate(0 ${fit.seatY + wx.waxY})`}>
+            <WaxSurface rx={waxRx} ry={waxRx * wx.waxTilt} color={wax!} uid={uid} />
+          </g>
+        )}
       </g>
     ),
   };
 }
 
 export function renderPlate(plate: Plate, vein: string, wax: string, uid: string, tint?: string | null): PlateRender {
-  if (plate.photo) return photoPlate(plate, uid, tint);
+  if (plate.photo) return photoPlate(plate, uid, tint, wax);
   if (plate.kind === 'contenedor' || plate.shape === 'cesta') return basket(plate, vein, wax, uid);
   return flatPlate(plate, vein, uid);
 }

@@ -1,4 +1,4 @@
-import { DEFAULT_MOLD_FIT, DEFAULT_PLATE_FIT, type Catalog, type Collection, type ColorOption, type Essence, type Mold, type MoldArt, type Plate } from '../types';
+import { DEFAULT_MOLD_FIT, DEFAULT_PLATE_FIT, DEFAULT_WAX, type Catalog, type Collection, type ColorOption, type Essence, type Mold, type MoldArt, type Plate } from '../types';
 import { Stage } from '../components/Stage';
 import { useState } from 'react';
 import { moldColors, plateColors, plateFits } from '../lib/rules';
@@ -202,6 +202,7 @@ export function MoldEditor({ item, set, catalog }: Ed<Mold>) {
 export function PlateEditor({ item, set, catalog }: Ed<Plate>) {
   const fit = { ...DEFAULT_PLATE_FIT, ...item.photoFit };
   const setFit = (patch: Partial<typeof fit>) => set({ photoFit: { ...fit, ...patch } });
+  const wax = { ...DEFAULT_WAX, ...item.photoFit };
   const mold = catalog.molds.find((m) => m.active) ?? catalog.molds[0];
   const color = catalog.colors.find((c) => c.id === (mold?.photoColorId ?? mold?.defaultColorId))?.hex ?? '#f5a3c0';
   const platePreviewColors = plateColors(catalog.colors, item);
@@ -325,6 +326,20 @@ export function PlateEditor({ item, set, catalog }: Ed<Plate>) {
               onChange={(squash) => setFit({ squash })}
             />
             <Slider label="Punto de apoyo (arriba / abajo)" value={fit.seatY} min={-60} max={60} step={1} def={0} onChange={(seatY) => setFit({ seatY })} />
+          </fieldset>
+        )}
+        {item.photo && item.kind === 'contenedor' && (
+          <fieldset className="afit">
+            <legend>Cera dentro del contenedor</legend>
+            <small>Se pinta del mismo color que la vela, para que se vea rellena y con la vela asentada.</small>
+            <Check label="Rellenar con cera" value={fit.waxOn ?? true} onChange={(waxOn) => setFit({ waxOn })} />
+            {(fit.waxOn ?? true) && (
+              <>
+                <Slider label="Ancho de la cera" value={wax.waxWidth} min={0.3} max={1} step={0.01} def={DEFAULT_WAX.waxWidth} format={pct} onChange={(waxWidth) => setFit({ waxWidth })} />
+                <Slider label="Inclinación de la cera" value={wax.waxTilt} min={0.1} max={0.7} step={0.01} def={DEFAULT_WAX.waxTilt} format={pct} onChange={(waxTilt) => setFit({ waxTilt })} />
+                <Slider label="Altura de la cera (arriba / abajo)" value={wax.waxY} min={-60} max={60} step={1} def={DEFAULT_WAX.waxY} onChange={(waxY) => setFit({ waxY })} />
+              </>
+            )}
           </fieldset>
         )}
         <Field label="¿Qué moldes caben?" hint="Se calcula con las medidas. Desmarca los que no caben aunque las medidas digan que sí.">
