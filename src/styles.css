@@ -1291,6 +1291,12 @@ textarea {
   justify-content: center;
 }
 
+.swatch-original {
+  background:
+    linear-gradient(135deg, transparent 46%, #d65a6b 46% 54%, transparent 54%),
+    #ffffff;
+}
+
 .preview-swatches .swatch {
   width: 30px;
   height: 30px;

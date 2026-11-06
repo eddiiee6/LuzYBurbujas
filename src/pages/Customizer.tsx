@@ -4,7 +4,7 @@ import { useCatalog, useLookup } from '../data/CatalogContext';
 import { Stage, stageToPng } from '../components/Stage';
 import { Chips, Picker, Swatches } from '../components/Picker';
 import { useCart } from '../lib/cart';
-import { availableTypes, designPrice, displayColorId, moldColors, money, plateFits, typeLabel, veinName } from '../lib/rules';
+import { availableTypes, designPrice, displayColorId, moldColors, money, plateColors, plateFits, typeLabel, veinName } from '../lib/rules';
 import type { Design, Plate, ProductType } from '../types';
 
 const SWIPE = 55; // unidades del escenario para cambiar de opción
@@ -38,6 +38,9 @@ export default function Customizer() {
   const vein = plate && !plate.photo
     ? (plate.veinColors.find((v) => v.replace('#', '') === params.get('veta')) ?? plate.veinColors[0] ?? null)
     : null;
+  // Color de la placa con foto: independiente del color de la vela.
+  const plateColorList = plate ? plateColors(catalog.colors, plate) : [];
+  const plateColor = plateColorList.find((c) => c.id === params.get('colorplaca')) ?? null;
   const essence = look.essence.get(params.get('esencia') ?? '') ?? null;
 
   const [lit, setLit] = useState(true);
@@ -90,6 +93,7 @@ export default function Customizer() {
     colorId: color.id,
     plateId: plate?.id ?? null,
     veinColor: vein,
+    plateColorId: plateColor?.id ?? null,
     essenceId: essence?.id ?? null,
   };
   const price = designPrice(catalog, design);
@@ -107,7 +111,7 @@ export default function Customizer() {
     markHint();
     const i = plateOptions.indexOf(plate);
     const p = plateOptions[(i + dir + plateOptions.length) % plateOptions.length];
-    update({ placa: p ? p.id : 'ninguna', veta: null });
+    update({ placa: p ? p.id : 'ninguna', veta: null, colorplaca: null });
     setAnim((a) => ({ ...a, plate: a.plate + 1 }));
   };
 
@@ -189,6 +193,7 @@ export default function Customizer() {
             colorId={color.id}
             plate={plate}
             veinColor={vein}
+            plateColor={plateColor?.hex ?? null}
             theme={theme}
             lit={lit}
             moldAnim={`m${anim.mold}`}
@@ -279,7 +284,7 @@ export default function Customizer() {
                   className={`plate-dot ${ok ? '' : 'no-fit'}`}
                   aria-pressed={p === plate}
                   onClick={() => {
-                    update({ placa: p ? p.id : 'ninguna', veta: null });
+                    update({ placa: p ? p.id : 'ninguna', veta: null, colorplaca: null });
                     setAnim((a) => ({ ...a, plate: a.plate + 1 }));
                   }}
                 >
@@ -289,6 +294,15 @@ export default function Customizer() {
             })}
           </div>
         </Picker>
+
+        {plateColorList.length > 0 && (
+          <Swatches
+            label="Color de la placa"
+            options={[{ id: 'original', hex: 'linear-gradient(135deg, transparent 46%, #d65a6b 46% 54%, transparent 54%), #ffffff', name: 'Original' }, ...plateColorList]}
+            value={plateColor?.id ?? 'original'}
+            onChange={(id) => update({ colorplaca: id === 'original' ? null : id })}
+          />
+        )}
 
         {plate && !plate.photo && plate.veinColors.length > 0 && (
           <Swatches

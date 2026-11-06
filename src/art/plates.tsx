@@ -1,6 +1,7 @@
 import type { ReactNode } from 'react';
 import { DEFAULT_PLATE_FIT, type Plate } from '../types';
 import { darken, lighten, mix, seeded } from '../lib/color';
+import { ColorizeFilter } from './ColorizeFilter';
 
 /** Escala del escenario: píxeles (del viewBox) por centímetro real. */
 export const PX_PER_CM = 24;
@@ -168,7 +169,8 @@ function basket(plate: Plate, vein: string, wax: string, uid: string): PlateRend
   };
 }
 
-function photoPlate(plate: Plate): PlateRender {
+function photoPlate(plate: Plate, uid: string, tint?: string | null): PlateRender {
+  const recolor = !!tint && !!plate.photoTintable;
   // La foto viene recortada al borde de la placa: su ancho es el largo real.
   const fit = { ...DEFAULT_PLATE_FIT, ...plate.photoFit };
   const w = plate.lengthCm * PX_PER_CM * fit.scale;
@@ -178,15 +180,24 @@ function photoPlate(plate: Plate): PlateRender {
     productScale: plate.kind === 'contenedor' ? 0.85 : 1,
     back: (
       <g transform={`rotate(${fit.rotate})`}>
+        {recolor && <ColorizeFilter id={`${uid}-tint`} hex={tint!} luma={plate.photoLuma} />}
         <ellipse cx={6} cy={h * 0.35} rx={w / 2 + 6} ry={h * 0.4} fill="#5b3a2e" opacity={0.18} filter="url(#shadow-blur)" />
-        <image href={plate.photo} x={-w / 2} y={-h / 2} width={w} height={h} preserveAspectRatio="none" />
+        <image
+          href={plate.photo}
+          x={-w / 2}
+          y={-h / 2}
+          width={w}
+          height={h}
+          preserveAspectRatio="none"
+          filter={recolor ? `url(#${uid}-tint)` : undefined}
+        />
       </g>
     ),
   };
 }
 
-export function renderPlate(plate: Plate, vein: string, wax: string, uid: string): PlateRender {
-  if (plate.photo) return photoPlate(plate);
+export function renderPlate(plate: Plate, vein: string, wax: string, uid: string, tint?: string | null): PlateRender {
+  if (plate.photo) return photoPlate(plate, uid, tint);
   if (plate.kind === 'contenedor' || plate.shape === 'cesta') return basket(plate, vein, wax, uid);
   return flatPlate(plate, vein, uid);
 }

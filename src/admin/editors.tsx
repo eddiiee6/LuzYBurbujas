@@ -1,10 +1,59 @@
 import { DEFAULT_MOLD_FIT, DEFAULT_PLATE_FIT, type Catalog, type Collection, type ColorOption, type Essence, type Mold, type MoldArt, type Plate } from '../types';
 import { Stage } from '../components/Stage';
 import { useState } from 'react';
-import { moldColors, plateFits } from '../lib/rules';
+import { moldColors, plateColors, plateFits } from '../lib/rules';
 import { Check, ColorInput, Field, Num, PhotoInput, Select, Slider, Text, slugify } from './fields';
 
 const pct = (v: number) => `${Math.round(v * 100)}%`;
+
+/** Botones para marcar qué colores se ofrecen. */
+function ColorToggles({ colors, value, onChange }: { colors: ColorOption[]; value?: string[]; onChange: (ids: string[]) => void }) {
+  return (
+    <div className="color-toggles">
+      {colors
+        .filter((c) => c.active)
+        .map((c) => {
+          const on = !!value?.includes(c.id);
+          return (
+            <button
+              key={c.id}
+              type="button"
+              className="chip"
+              aria-pressed={on}
+              onClick={() => onChange(on ? (value ?? []).filter((x) => x !== c.id) : [...(value ?? []), c.id])}
+            >
+              <i className="dot" style={{ background: c.hex }} />
+              {c.name}
+            </button>
+          );
+        })}
+    </div>
+  );
+}
+
+/** Muestras para probar colores bajo la vista previa. */
+function PreviewSwatches({ colors, value, onChange, original }: { colors: ColorOption[]; value: string | null; onChange: (id: string | null) => void; original?: boolean }) {
+  return (
+    <div className="swatches preview-swatches" role="radiogroup" aria-label="Probar color">
+      {original && (
+        <button type="button" role="radio" aria-checked={value === null} aria-label="Original" title="Original" className="swatch swatch-original" onClick={() => onChange(null)} />
+      )}
+      {colors.map((c) => (
+        <button
+          key={c.id}
+          type="button"
+          role="radio"
+          aria-checked={c.id === value}
+          aria-label={c.name}
+          title={`Probar ${c.name}`}
+          className="swatch"
+          style={{ background: c.hex }}
+          onClick={() => onChange(c.id)}
+        />
+      ))}
+    </div>
+  );
+}
 
 type Ed<T> = { item: T; set: (patch: Partial<T>) => void; catalog: Catalog };
 
@@ -112,31 +161,7 @@ export function MoldEditor({ item, set, catalog }: Ed<Mold>) {
           )}
           {(!item.photo || item.photoTintable) && (
             <Field label="Colores que se ofrecen" hint="Si no marcas ninguno, se ofrecen todos.">
-              <div className="color-toggles">
-                {catalog.colors
-                  .filter((c) => c.active)
-                  .map((c) => {
-                    const on = !!item.allowedColorIds?.includes(c.id);
-                    return (
-                      <button
-                        key={c.id}
-                        type="button"
-                        className="chip"
-                        aria-pressed={on}
-                        onClick={() =>
-                          set({
-                            allowedColorIds: on
-                              ? (item.allowedColorIds ?? []).filter((x) => x !== c.id)
-                              : [...(item.allowedColorIds ?? []), c.id],
-                          })
-                        }
-                      >
-                        <i className="dot" style={{ background: c.hex }} />
-                        {c.name}
-                      </button>
-                    );
-                  })}
-              </div>
+              <ColorToggles colors={catalog.colors} value={item.allowedColorIds} onChange={(allowedColorIds) => set({ allowedColorIds })} />
             </Field>
           )}
           <Field label="Color con el que aparece primero">
@@ -168,21 +193,7 @@ export function MoldEditor({ item, set, catalog }: Ed<Mold>) {
             lit
           />
         </div>
-        <div className="swatches preview-swatches" role="radiogroup" aria-label="Probar color">
-          {previewColors.map((c) => (
-            <button
-              key={c.id}
-              type="button"
-              role="radio"
-              aria-checked={c.id === preview?.id}
-              aria-label={c.name}
-              title={`Probar ${c.name}`}
-              className="swatch"
-              style={{ background: c.hex }}
-              onClick={() => setPreviewId(c.id)}
-            />
-          ))}
-        </div>
+        <PreviewSwatches colors={previewColors} value={preview?.id ?? null} onChange={setPreviewId} />
       </div>
     </div>
   );
@@ -192,7 +203,10 @@ export function PlateEditor({ item, set, catalog }: Ed<Plate>) {
   const fit = { ...DEFAULT_PLATE_FIT, ...item.photoFit };
   const setFit = (patch: Partial<typeof fit>) => set({ photoFit: { ...fit, ...patch } });
   const mold = catalog.molds.find((m) => m.active) ?? catalog.molds[0];
-  const color = catalog.colors.find((c) => c.id === mold?.defaultColorId)?.hex ?? '#f5a3c0';
+  const color = catalog.colors.find((c) => c.id === (mold?.photoColorId ?? mold?.defaultColorId))?.hex ?? '#f5a3c0';
+  const platePreviewColors = plateColors(catalog.colors, item);
+  const [platePreviewId, setPlatePreviewId] = useState<string | null>(null);
+  const platePreview = platePreviewColors.find((c) => c.id === platePreviewId) ?? null;
   return (
     <div className="editor-grid">
       <div className="editor-fields">
@@ -268,8 +282,23 @@ export function PlateEditor({ item, set, catalog }: Ed<Plate>) {
           </div>
         </Field>
         <Field label="Foto sin fondo (opcional)" hint="Si no hay foto, el sitio dibuja la placa con vetas.">
-          <PhotoInput value={item.photo} name={item.id} onChange={(photo, photoAspect) => set({ photo, photoAspect })} />
+          <PhotoInput value={item.photo} name={item.id} onChange={(photo, photoAspect, photoLuma) => set({ photo, photoAspect, photoLuma })} />
         </Field>
+        {item.photo && (
+          <fieldset className="afit">
+            <legend>Color de la placa</legend>
+            <Check
+              label="Permitir cambiar el color de la placa (recolorea la foto, aparte del color de la vela)"
+              value={!!item.photoTintable}
+              onChange={(photoTintable) => set({ photoTintable })}
+            />
+            {item.photoTintable && (
+              <Field label="Colores que se ofrecen" hint="Si no marcas ninguno, se ofrecen todos. Siempre se puede elegir el color original.">
+                <ColorToggles colors={catalog.colors} value={item.photoColorIds} onChange={(photoColorIds) => set({ photoColorIds })} />
+              </Field>
+            )}
+          </fieldset>
+        )}
         {item.photo && (
           <fieldset className="afit">
             <legend>Ajuste de la foto</legend>
@@ -330,9 +359,23 @@ export function PlateEditor({ item, set, catalog }: Ed<Plate>) {
           </Field>
         </div>
       </div>
-      <div className="editor-preview">
-        {mold && (
-          <Stage mold={mold} type="vela" color={color} plate={item} veinColor={item.veinColors[0] ?? null} lit />
+      <div className="editor-preview-col">
+        <div className="editor-preview">
+          {mold && (
+            <Stage
+              mold={mold}
+              type="vela"
+              color={color}
+              colorId={mold.photoColorId ?? mold.defaultColorId}
+              plate={item}
+              veinColor={item.veinColors[0] ?? null}
+              plateColor={platePreview?.hex ?? null}
+              lit
+            />
+          )}
+        </div>
+        {platePreviewColors.length > 0 && (
+          <PreviewSwatches colors={platePreviewColors} value={platePreview?.id ?? null} onChange={setPlatePreviewId} original />
         )}
       </div>
     </div>

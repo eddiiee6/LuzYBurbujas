@@ -2,7 +2,8 @@ import { forwardRef, useId } from 'react';
 import { DEFAULT_MOLD_FIT, type Collection, type Mold, type Plate, type ProductType } from '../types';
 import { moldArt } from '../art/molds';
 import { PX_PER_CM, renderPlate } from '../art/plates';
-import { colorizeTables, mix } from '../lib/color';
+import { mix } from '../lib/color';
+import { ColorizeFilter } from '../art/ColorizeFilter';
 
 export interface StageProps {
   mold: Mold;
@@ -12,6 +13,8 @@ export interface StageProps {
   colorId?: string;
   plate: Plate | null;
   veinColor: string | null;
+  /** Color de la placa con foto (hex). Sin definir = foto original. */
+  plateColor?: string | null;
   theme?: Collection['theme'];
   lit?: boolean;
   /** Cambia cuando cambia el molde / la placa, para animar la entrada. */
@@ -30,7 +33,7 @@ const SEAT = 268;
 
 /** Escenario en capas: fondo → placa (atrás) → producto → placa (frente). */
 export const Stage = forwardRef<SVGSVGElement, StageProps>(function Stage(
-  { mold, type, color, colorId, plate, veinColor, theme, lit, moldAnim, plateAnim, dragMold = 0, dragPlate = 0, bare, className },
+  { mold, type, color, colorId, plate, veinColor, plateColor, theme, lit, moldAnim, plateAnim, dragMold = 0, dragPlate = 0, bare, className },
   ref,
 ) {
   const uid = useId().replace(/:/g, '');
@@ -41,7 +44,7 @@ export const Stage = forwardRef<SVGSVGElement, StageProps>(function Stage(
   const photoH = photoW * (mold.photoAspect ?? 1);
   const spec = mold.photo ? { ...art, height: photoH - fit.offsetY, footY: 18 } : art;
   const scale = (mold.baseWidthCm * PX_PER_CM) / 100;
-  const pr = plate ? renderPlate(plate, veinColor ?? plate.veinColors[0] ?? '#f29bb8', color, `${uid}p`) : null;
+  const pr = plate ? renderPlate(plate, veinColor ?? plate.veinColors[0] ?? '#f29bb8', color, `${uid}p`, plateColor) : null;
   const pScale = scale * (pr?.productScale ?? 1);
   const productY = SEAT + (pr?.seatY ?? 0) + spec.footY * pScale;
   const bg = theme ?? { bg: '#fde8f0', bg2: '#f3e3fb', accent: '#e5487f' };
@@ -54,19 +57,9 @@ export const Stage = forwardRef<SVGSVGElement, StageProps>(function Stage(
     : `40 ${shift + 55} 320 320`;
 
   const recolor = !!mold.photo && !!mold.photoTintable && colorId !== mold.photoColorId;
-  const tables = recolor ? colorizeTables(color, mold.photoLuma) : null;
   const product = mold.photo ? (
     <g>
-      {tables && (
-        <filter id={`${uid}-tint`} colorInterpolationFilters="sRGB">
-          <feColorMatrix type="matrix" values="0.299 0.587 0.114 0 0 0.299 0.587 0.114 0 0 0.299 0.587 0.114 0 0 0 0 0 1 0" />
-          <feComponentTransfer>
-            <feFuncR type="table" tableValues={tables[0]} />
-            <feFuncG type="table" tableValues={tables[1]} />
-            <feFuncB type="table" tableValues={tables[2]} />
-          </feComponentTransfer>
-        </filter>
-      )}
+      {recolor && <ColorizeFilter id={`${uid}-tint`} hex={color} luma={mold.photoLuma} />}
       <image
         href={mold.photo}
         x={-photoW / 2}
@@ -74,7 +67,7 @@ export const Stage = forwardRef<SVGSVGElement, StageProps>(function Stage(
         width={photoW}
         height={photoH}
         preserveAspectRatio="none"
-        filter={tables ? `url(#${uid}-tint)` : undefined}
+        filter={recolor ? `url(#${uid}-tint)` : undefined}
       />
     </g>
   ) : (

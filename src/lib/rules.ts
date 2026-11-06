@@ -32,6 +32,14 @@ export function moldColors(colors: ColorOption[], mold: Mold): ColorOption[] {
   return allowed.length ? allowed : active;
 }
 
+/** Colores para recolorear una placa con foto (independientes de los de la vela). */
+export function plateColors(colors: ColorOption[], plate: Plate): ColorOption[] {
+  if (!plate.photo || !plate.photoTintable) return [];
+  const active = colors.filter((c) => c.active);
+  const allowed = plate.photoColorIds?.length ? active.filter((c) => plate.photoColorIds!.includes(c.id)) : active;
+  return allowed.length ? allowed : active;
+}
+
 /** Color con el que se muestra el molde en tarjetas y miniaturas. */
 export function displayColorId(mold: Mold): string {
   return mold.photo && mold.photoColorId ? mold.photoColorId : mold.defaultColorId;
