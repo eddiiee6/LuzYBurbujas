@@ -44,6 +44,7 @@ export default function Order() {
             color: it.colorId,
             placa: it.plateId ?? 'ninguna',
             ...(it.veinColor ? { veta: it.veinColor.replace('#', '') } : {}),
+            ...(it.plateColorId ? { colorplaca: it.plateColorId } : {}),
             ...(it.essenceId ? { esencia: it.essenceId } : {}),
           });
           return (
@@ -53,8 +54,10 @@ export default function Order() {
                   mold={mold}
                   type={it.type}
                   color={look.color.get(it.colorId)?.hex ?? '#fff'}
+                  colorId={it.colorId}
                   plate={plate}
                   veinColor={it.veinColor}
+                  plateColor={it.plateColorId ? look.color.get(it.plateColorId)?.hex : null}
                   theme={look.collection.get(mold.collectionId)?.theme}
                 />
               </Link>

@@ -3,6 +3,7 @@ import { useCatalog, useLookup } from '../data/CatalogContext';
 import { Stage } from '../components/Stage';
 import { MoldCard } from '../components/MoldCard';
 import { whatsappHello } from '../lib/cart';
+import { displayColorId } from '../lib/rules';
 
 export default function Home() {
   const { catalog } = useCatalog();
@@ -43,7 +44,8 @@ export default function Home() {
               <Stage
                 mold={hero}
                 type="vela"
-                color={look.color.get(hero.defaultColorId)?.hex ?? '#f5a3c0'}
+                color={look.color.get(displayColorId(hero))?.hex ?? '#f5a3c0'}
+                colorId={displayColorId(hero)}
                 plate={heroPlate}
                 veinColor={heroPlate?.veinColors[0] ?? null}
                 theme={look.collection.get(hero.collectionId)?.theme}

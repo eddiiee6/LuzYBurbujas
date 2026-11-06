@@ -36,8 +36,14 @@ export interface Mold {
   photoAspect?: number;
   /** Ajuste fino de la foto: tamaño (1 = ancho real) y desplazamiento vertical. */
   photoFit?: MoldPhotoFit;
-  /** Si la foto es clara, el sitio la puede teñir del color elegido. */
+  /** Permite recolorear la foto a los otros colores (conserva luces y sombras). */
   photoTintable?: boolean;
+  /** Color real del producto en la foto: con ese color se muestra sin cambios. */
+  photoColorId?: string;
+  /** Brillo promedio de la foto (0..1), se calcula al subirla. Sirve para recolorear. */
+  photoLuma?: number;
+  /** Colores que se ofrecen para este molde. Vacío o sin definir = todos. */
+  allowedColorIds?: string[];
   active: boolean;
   featured?: boolean;
   order: number;
@@ -86,6 +92,12 @@ export interface Plate {
   photoAspect?: number;
   /** Ajuste fino de la foto para que coincida con el ángulo de los moldes. */
   photoFit?: PlatePhotoFit;
+  /** Permite recolorear la foto de la placa (independiente del color de la vela). */
+  photoTintable?: boolean;
+  /** Brillo promedio de la foto (0..1), se calcula al subirla. */
+  photoLuma?: number;
+  /** Colores que se ofrecen para la placa con foto. Vacío o sin definir = todos. */
+  photoColorIds?: string[];
   /** Moldes que no caben aunque las medidas digan que sí. */
   blockedMoldIds: string[];
   active: boolean;
@@ -137,6 +149,8 @@ export interface Design {
   colorId: string;
   plateId: string | null;
   veinColor: string | null;
+  /** Color de la placa con foto (id de Color). Sin definir = color original de la foto. */
+  plateColorId?: string | null;
   essenceId: string | null;
 }
 

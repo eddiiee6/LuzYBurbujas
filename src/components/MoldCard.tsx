@@ -1,18 +1,19 @@
 import { Link } from 'react-router-dom';
 import { useLookup } from '../data/CatalogContext';
-import { availableTypes, money, typeLabel } from '../lib/rules';
+import { availableTypes, displayColorId, money, typeLabel } from '../lib/rules';
 import type { Mold } from '../types';
 import { Stage } from './Stage';
 
 export function MoldCard({ mold }: { mold: Mold }) {
   const look = useLookup();
   const theme = look.collection.get(mold.collectionId)?.theme;
-  const color = look.color.get(mold.defaultColorId)?.hex ?? '#f5a3c0';
+  const colorId = displayColorId(mold);
+  const color = look.color.get(colorId)?.hex ?? '#f5a3c0';
   const types = availableTypes(mold);
   return (
     <Link to={`/personaliza?molde=${mold.slug}`} className="mold-card" style={{ ['--card-bg' as string]: theme?.bg ?? '#fde8f0' }}>
       <div className="mold-card-art">
-        <Stage bare mold={mold} type={types.includes('vela') ? 'vela' : 'jabon'} color={color} plate={null} veinColor={null} />
+        <Stage bare mold={mold} type={types.includes('vela') ? 'vela' : 'jabon'} color={color} colorId={colorId} plate={null} veinColor={null} />
       </div>
       <div className="mold-card-body">
         <span className="eyebrow">{look.collection.get(mold.collectionId)?.name}</span>
