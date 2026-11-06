@@ -2,12 +2,14 @@ import { forwardRef, useId } from 'react';
 import { DEFAULT_MOLD_FIT, type Collection, type Mold, type Plate, type ProductType } from '../types';
 import { moldArt } from '../art/molds';
 import { PX_PER_CM, renderPlate } from '../art/plates';
-import { lighten, mix, tintMatrix } from '../lib/color';
+import { colorizeTables, mix } from '../lib/color';
 
 export interface StageProps {
   mold: Mold;
   type: ProductType;
   color: string;
+  /** Id del color elegido: si es el color de la foto, la foto se muestra tal cual. */
+  colorId?: string;
   plate: Plate | null;
   veinColor: string | null;
   theme?: Collection['theme'];
@@ -28,7 +30,7 @@ const SEAT = 268;
 
 /** Escenario en capas: fondo → placa (atrás) → producto → placa (frente). */
 export const Stage = forwardRef<SVGSVGElement, StageProps>(function Stage(
-  { mold, type, color, plate, veinColor, theme, lit, moldAnim, plateAnim, dragMold = 0, dragPlate = 0, bare, className },
+  { mold, type, color, colorId, plate, veinColor, theme, lit, moldAnim, plateAnim, dragMold = 0, dragPlate = 0, bare, className },
   ref,
 ) {
   const uid = useId().replace(/:/g, '');
@@ -51,11 +53,18 @@ export const Stage = forwardRef<SVGSVGElement, StageProps>(function Stage(
     ? `${CX - 150} ${productY - Math.max(spec.height * pScale, 100) - 40} 300 ${Math.max(spec.height * pScale, 100) + 90}`
     : `40 ${shift + 55} 320 320`;
 
+  const recolor = !!mold.photo && !!mold.photoTintable && colorId !== mold.photoColorId;
+  const tables = recolor ? colorizeTables(color, mold.photoLuma) : null;
   const product = mold.photo ? (
     <g>
-      {mold.photoTintable && (
+      {tables && (
         <filter id={`${uid}-tint`} colorInterpolationFilters="sRGB">
-          <feColorMatrix type="matrix" values={tintMatrix(lighten(color, 0.1))} />
+          <feColorMatrix type="matrix" values="0.299 0.587 0.114 0 0 0.299 0.587 0.114 0 0 0.299 0.587 0.114 0 0 0 0 0 1 0" />
+          <feComponentTransfer>
+            <feFuncR type="table" tableValues={tables[0]} />
+            <feFuncG type="table" tableValues={tables[1]} />
+            <feFuncB type="table" tableValues={tables[2]} />
+          </feComponentTransfer>
         </filter>
       )}
       <image
@@ -65,7 +74,7 @@ export const Stage = forwardRef<SVGSVGElement, StageProps>(function Stage(
         width={photoW}
         height={photoH}
         preserveAspectRatio="none"
-        filter={mold.photoTintable ? `url(#${uid}-tint)` : undefined}
+        filter={tables ? `url(#${uid}-tint)` : undefined}
       />
     </g>
   ) : (

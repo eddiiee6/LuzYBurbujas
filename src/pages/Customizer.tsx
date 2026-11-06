@@ -4,7 +4,7 @@ import { useCatalog, useLookup } from '../data/CatalogContext';
 import { Stage, stageToPng } from '../components/Stage';
 import { Chips, Picker, Swatches } from '../components/Picker';
 import { useCart } from '../lib/cart';
-import { availableTypes, designPrice, money, plateFits, typeLabel, veinName } from '../lib/rules';
+import { availableTypes, designPrice, displayColorId, moldColors, money, plateFits, typeLabel, veinName } from '../lib/rules';
 import type { Design, Plate, ProductType } from '../types';
 
 const SWIPE = 55; // unidades del escenario para cambiar de opción
@@ -25,11 +25,17 @@ export default function Customizer() {
   const mold = molds.find((m) => m.slug === params.get('molde')) ?? molds[0];
   const types = mold ? availableTypes(mold) : [];
   const type = (types.find((t) => t === params.get('tipo')) ?? types[0] ?? 'jabon') as ProductType;
-  const color = look.color.get(params.get('color') ?? '') ?? look.color.get(mold?.defaultColorId ?? '') ?? colors[0];
+  const moldColorList = mold ? moldColors(catalog.colors, mold) : colors;
+  const startColorId = mold ? displayColorId(mold) : '';
+  const color =
+    moldColorList.find((c) => c.id === params.get('color')) ??
+    moldColorList.find((c) => c.id === startColorId) ??
+    moldColorList[0];
   const plateParam = params.get('placa');
   const plate: Plate | null =
     plateParam === 'ninguna' ? null : (plates.find((p) => p.id === plateParam) ?? plates[0] ?? null);
-  const vein = plate
+  // Con foto real de la placa, las vetas son las de la foto: no se eligen.
+  const vein = plate && !plate.photo
     ? (plate.veinColors.find((v) => v.replace('#', '') === params.get('veta')) ?? plate.veinColors[0] ?? null)
     : null;
   const essence = look.essence.get(params.get('esencia') ?? '') ?? null;
@@ -94,7 +100,7 @@ export default function Customizer() {
     const i = molds.indexOf(mold);
     const m = molds[(i + dir + molds.length) % molds.length];
     const t = availableTypes(m).includes(type) ? type : availableTypes(m)[0];
-    update({ molde: m.slug, tipo: t ?? null, color: m.defaultColorId });
+    update({ molde: m.slug, tipo: t ?? null, color: displayColorId(m) });
     setAnim((a) => ({ ...a, mold: a.mold + 1 }));
   };
   const stepPlate = (dir: 1 | -1) => {
@@ -180,6 +186,7 @@ export default function Customizer() {
             mold={mold}
             type={type}
             color={color.hex}
+            colorId={color.id}
             plate={plate}
             veinColor={vein}
             theme={theme}
@@ -230,11 +237,11 @@ export default function Customizer() {
                 aria-label={m.name}
                 onClick={() => {
                   const t = availableTypes(m).includes(type) ? type : availableTypes(m)[0];
-                  update({ molde: m.slug, tipo: t ?? null, color: m.defaultColorId });
+                  update({ molde: m.slug, tipo: t ?? null, color: displayColorId(m) });
                   setAnim((a) => ({ ...a, mold: a.mold + 1 }));
                 }}
               >
-                <Stage bare mold={m} type="jabon" color={look.color.get(m.defaultColorId)?.hex ?? '#f5a3c0'} plate={null} veinColor={null} />
+                <Stage bare mold={m} type="jabon" color={look.color.get(displayColorId(m))?.hex ?? '#f5a3c0'} colorId={displayColorId(m)} plate={null} veinColor={null} />
               </button>
             ))}
           </div>
@@ -249,7 +256,7 @@ export default function Customizer() {
 
         <Swatches
           label="Color"
-          options={colors}
+          options={moldColorList}
           value={color.id}
           onChange={(id) => update({ color: id })}
         />
@@ -283,7 +290,7 @@ export default function Customizer() {
           </div>
         </Picker>
 
-        {plate && plate.veinColors.length > 0 && (
+        {plate && !plate.photo && plate.veinColors.length > 0 && (
           <Swatches
             label="Color de las vetas"
             options={plate.veinColors.map((v) => ({ id: v, hex: v, name: veinName(v) }))}

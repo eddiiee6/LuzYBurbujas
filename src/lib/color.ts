@@ -20,16 +20,26 @@ export function mix(a: string, b: string, t: number) {
 export const lighten = (c: string, t: number) => mix(c, '#ffffff', t);
 export const darken = (c: string, t: number) => mix(c, '#2a1414', t);
 
-/** Valores 0..1 para un filtro feColorMatrix que tiñe una foto clara. */
-export function tintMatrix(hex: string) {
-  const [r, g, b] = parse(hex).map((v) => v / 255);
-  // Multiplica la luminancia de la foto por el color elegido.
-  return [
-    `${0.299 * r} ${0.587 * r} ${0.114 * r} 0 0`,
-    `${0.299 * g} ${0.587 * g} ${0.114 * g} 0 0`,
-    `${0.299 * b} ${0.587 * b} ${0.114 * b} 0 0`,
-    '0 0 0 1 0',
-  ].join(' ');
+/**
+ * Recoloreado que conserva luces y sombras (como "colorear" en un editor de fotos):
+ * la foto se pasa a escala de grises y cada nivel de gris se convierte en un tono
+ * del color elegido. El brillo promedio de la foto (`mid`) queda exactamente en el
+ * color elegido; lo más oscuro tiende a sombra y lo más claro a brillo.
+ * Devuelve las tablas para feFuncR/G/B de un feComponentTransfer.
+ */
+export function colorizeTables(hex: string, mid = 0.55): [string, string, string] {
+  const m = Math.min(0.85, Math.max(0.15, mid));
+  const steps = 16;
+  return parse(hex).map((v) => {
+    const c = v / 255;
+    const vals: string[] = [];
+    for (let i = 0; i <= steps; i++) {
+      const t = i / steps;
+      const out = t <= m ? c * (0.18 + 0.82 * (t / m)) : c + (1 - c) * 0.7 * ((t - m) / (1 - m));
+      vals.push(out.toFixed(3));
+    }
+    return vals.join(' ');
+  }) as [string, string, string];
 }
 
 /** Generador pseudoaleatorio con semilla: el marmoleado no "salta" al redibujar. */

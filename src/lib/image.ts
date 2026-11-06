@@ -5,7 +5,7 @@
  * - la reduce a un tamaño razonable y la guarda en WebP con transparencia.
  * Devuelve también la proporción alto/ancho para colocarla bien.
  */
-export async function prepareCutout(file: Blob, max = 900): Promise<{ blob: Blob; aspect: number }> {
+export async function prepareCutout(file: Blob, max = 900): Promise<{ blob: Blob; aspect: number; luma: number }> {
   const bmp = await createImageBitmap(file);
   const src = document.createElement('canvas');
   src.width = bmp.width;
@@ -19,9 +19,14 @@ export async function prepareCutout(file: Blob, max = 900): Promise<{ blob: Blob
   let y0 = height;
   let x1 = -1;
   let y1 = -1;
+  let lumaSum = 0;
+  let lumaCount = 0;
   for (let y = 0; y < height; y++) {
     for (let x = 0; x < width; x++) {
-      if (data[(y * width + x) * 4 + 3] > 12) {
+      const i = (y * width + x) * 4;
+      if (data[i + 3] > 12) {
+        lumaSum += (0.299 * data[i] + 0.587 * data[i + 1] + 0.114 * data[i + 2]) / 255;
+        lumaCount++;
         if (x < x0) x0 = x;
         if (x > x1) x1 = x;
         if (y < y0) y0 = y;
@@ -47,7 +52,7 @@ export async function prepareCutout(file: Blob, max = 900): Promise<{ blob: Blob
   const blob = await new Promise<Blob>((res, rej) =>
     out.toBlob((b) => (b ? res(b) : rej(new Error('No se pudo procesar la imagen'))), 'image/webp', 0.88),
   );
-  return { blob, aspect: ch / cw };
+  return { blob, aspect: ch / cw, luma: lumaCount ? lumaSum / lumaCount : 0.55 };
 }
 
 export function blobToDataUrl(blob: Blob): Promise<string> {

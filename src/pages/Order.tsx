@@ -53,6 +53,7 @@ export default function Order() {
                   mold={mold}
                   type={it.type}
                   color={look.color.get(it.colorId)?.hex ?? '#fff'}
+                  colorId={it.colorId}
                   plate={plate}
                   veinColor={it.veinColor}
                   theme={look.collection.get(mold.collectionId)?.theme}

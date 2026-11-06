@@ -1,4 +1,4 @@
-import type { Catalog, Design, Mold, Plate, ProductType } from '../types';
+import type { Catalog, ColorOption, Design, Mold, Plate, ProductType } from '../types';
 
 /** Margen mínimo (cm) entre la orilla del molde y la orilla de la placa. */
 const MARGIN_CM = 0.2;
@@ -18,6 +18,23 @@ export function plateFits(mold: Mold, plate: Plate, type: ProductType): FitResul
 
 export function availableTypes(mold: Mold): ProductType[] {
   return (['jabon', 'vela'] as ProductType[]).filter((t) => typeof mold.prices[t] === 'number');
+}
+
+/** Colores que se le ofrecen al cliente para este molde. */
+export function moldColors(colors: ColorOption[], mold: Mold): ColorOption[] {
+  const active = colors.filter((c) => c.active);
+  // Foto que no se puede recolorear: solo existe en el color de la foto.
+  if (mold.photo && !mold.photoTintable) {
+    const own = active.filter((c) => c.id === mold.photoColorId);
+    return own.length ? own : active.filter((c) => c.id === mold.defaultColorId);
+  }
+  const allowed = mold.allowedColorIds?.length ? active.filter((c) => mold.allowedColorIds!.includes(c.id)) : active;
+  return allowed.length ? allowed : active;
+}
+
+/** Color con el que se muestra el molde en tarjetas y miniaturas. */
+export function displayColorId(mold: Mold): string {
+  return mold.photo && mold.photoColorId ? mold.photoColorId : mold.defaultColorId;
 }
 
 export const typeLabel: Record<ProductType, string> = { jabon: 'Jabón', vela: 'Vela' };
