@@ -65,7 +65,23 @@ export interface PlatePhotoFit {
   rotate: number;
   /** Aplastar (<1) o estirar (>1) en vertical para igualar la inclinación. */
   squash: number;
+  /** Contenedores: dibujar la cera dentro (por defecto sí en contenedores). */
+  waxOn?: boolean;
+  /** Ancho de la cera respecto al ancho de la foto (0..1). */
+  waxWidth?: number;
+  /** Inclinación de la superficie de cera: alto/ancho (0..1). */
+  waxTilt?: number;
+  /** Subir (-) o bajar (+) la superficie de cera respecto al punto de apoyo. */
+  waxY?: number;
+  /** "ovalo": la cera es un óvalo con los controles. "pintado": la zona que se pintó. */
+  waxMode?: 'ovalo' | 'pintado';
+  /** Máscara pintada (PNG blanco sobre transparente, mismo encuadre que la foto). */
+  waxMask?: string;
+  /** Caja de lo pintado, en fracciones de la foto (0..1), para el brillo de la cera. */
+  waxBox?: { x: number; y: number; w: number; h: number };
 }
+
+export const DEFAULT_WAX = { waxWidth: 0.8, waxTilt: 0.32, waxY: 0 };
 
 export const DEFAULT_MOLD_FIT: MoldPhotoFit = { scale: 1, offsetY: 0 };
 export const DEFAULT_PLATE_FIT: PlatePhotoFit = { scale: 1, seatY: 0, rotate: 0, squash: 1 };
