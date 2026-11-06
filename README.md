@@ -69,7 +69,7 @@ Sin configurar nada, el sitio funciona en **modo local**: `/admin` está abierto
 ## Conectar Supabase (para que el catálogo se guarde de verdad)
 
 1. Crea un proyecto gratis en [supabase.com](https://supabase.com).
-2. **SQL Editor** → pega `supabase/schema.sql`, **cambia el correo** de la línea `insert into public.admins` por el tuyo y ejecútalo.
+2. **SQL Editor** → pega `supabase/schema.sql` **por partes** (Parte 1, 2 y 3), **cambiando el correo** de la línea `insert into public.admins` por el tuyo, y toca **Run** en cada una.
 3. **Authentication → Users → Add user**: crea tu usuario con ese mismo correo y una contraseña. En **Authentication → Sign In / Providers**, desactiva "Allow new users to sign up" para que nadie más pueda registrarse.
 4. **Project Settings → API**: copia la *Project URL* y la *anon public key* a un archivo `.env.local` (usa `.env.example` como guía).
 5. Entra a `/admin` → **Respaldo** → **Cargar catálogo inicial en la base de datos**.

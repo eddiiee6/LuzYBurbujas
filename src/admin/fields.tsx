@@ -1,5 +1,5 @@
 import { useState, type ReactNode } from 'react';
-import { repo } from '../data/repo';
+import { friendlyError, repo } from '../data/repo';
 import { prepareCutout } from '../lib/image';
 
 export function Field({ label, hint, children }: { label: string; hint?: ReactNode; children: ReactNode }) {
@@ -95,7 +95,7 @@ export function PhotoInput({
                 const { blob, aspect } = await prepareCutout(f);
                 onChange(await repo.uploadImage(blob, name), aspect);
               } catch (x) {
-                setErr(x instanceof Error ? x.message : 'No se pudo subir');
+                setErr(friendlyError(x));
               } finally {
                 setBusy(false);
                 e.target.value = '';
