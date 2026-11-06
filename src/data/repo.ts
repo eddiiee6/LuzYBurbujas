@@ -194,3 +194,48 @@ export function normalize(c: Catalog): Catalog {
     colors: sortByOrder(c.colors),
   };
 }
+
+/** Traduce errores técnicos (Supabase, red) a mensajes claros. */
+export function friendlyError(e: unknown): string {
+  const raw = e instanceof Error ? e.message : typeof e === 'object' && e && 'message' in e ? String(e.message) : String(e);
+  const m = raw.toLowerCase();
+  if (m.includes('row-level security') || m.includes('permission denied') || m.includes('unauthorized'))
+    return 'Tu usuario no tiene permiso para editar. Revisa que tu correo esté en la tabla "admins" de Supabase.';
+  if (m.includes('jwt') || m.includes('session')) return 'Tu sesión expiró. Sal y vuelve a entrar.';
+  if (m.includes('failed to fetch') || m.includes('network')) return 'No hay conexión con la base de datos. Revisa tu internet e intenta de nuevo.';
+  if (m.includes('bucket not found')) return 'Falta el espacio de fotos "catalogo" en Supabase. Vuelve a ejecutar schema.sql.';
+  if (m.includes('payload too large') || m.includes('exceeded')) return 'La foto es demasiado pesada.';
+  return raw || 'Algo salió mal';
+}
+
+/** Lee un respaldo .json y revisa que de verdad sea un catálogo. */
+export function parseBackup(text: string): Catalog {
+  let data: unknown;
+  try {
+    data = JSON.parse(text);
+  } catch {
+    throw new Error('El archivo no es un respaldo válido.');
+  }
+  const c = data as Partial<Catalog>;
+  if (!c || !Array.isArray(c.molds) || !Array.isArray(c.plates) || !c.settings)
+    throw new Error('El archivo no parece un respaldo del catálogo.');
+  return normalize({ ...structuredClone(seedCatalog), ...c } as Catalog);
+}
+
+/**
+ * Los respaldos hechos en modo local traen las fotos dentro del archivo
+ * (data:...). Antes de guardarlos en Supabase, cada foto se sube al
+ * almacenamiento y se reemplaza por su enlace.
+ */
+export async function uploadEmbeddedPhotos(c: Catalog, onProgress?: (done: number, total: number) => void): Promise<Catalog> {
+  if (repo.mode !== 'supabase') return c;
+  const items = [...c.molds, ...c.plates].filter((x) => x.photo?.startsWith('data:'));
+  let done = 0;
+  onProgress?.(done, items.length);
+  for (const item of items) {
+    const blob = await (await fetch(item.photo!)).blob();
+    item.photo = await repo.uploadImage(blob, item.id);
+    onProgress?.(++done, items.length);
+  }
+  return c;
+}
