@@ -345,8 +345,24 @@ export function PlateEditor({ item, set, catalog }: Ed<Plate>) {
         {item.photo && item.kind === 'contenedor' && (
           <fieldset className="afit">
             <legend>Cera dentro del contenedor</legend>
-            <small>Se pinta del mismo color que la vela, para que se vea rellena y con la vela asentada.</small>
+            <small>Para que el contenedor se vea relleno y con la vela asentada.</small>
             <Check label="Rellenar con cera" value={fit.waxOn ?? true} onChange={(waxOn) => setFit({ waxOn })} />
+            {(fit.waxOn ?? true) && (
+              <Field label="Color de la cera">
+                <Select
+                  value={fit.waxColor ?? 'vela'}
+                  onChange={(waxColor) => setFit({ waxColor })}
+                  options={[
+                    { value: 'vela', label: 'Igual que la vela' },
+                    { value: '#f7f3ee', label: 'Blanca' },
+                    { value: '#f3e6cf', label: 'Crema' },
+                    ...catalog.colors
+                      .filter((c) => c.active && !['#f7f3ee', '#f3e6cf'].includes(c.hex.toLowerCase()))
+                      .map((c) => ({ value: c.hex.toLowerCase(), label: c.name })),
+                  ]}
+                />
+              </Field>
+            )}
             {(fit.waxOn ?? true) && (
               <div className="chips" role="radiogroup" aria-label="Forma de la cera">
                 <button type="button" className="chip" role="radio" aria-checked={fit.waxMode !== 'pintado'} onClick={() => setFit({ waxMode: 'ovalo' })}>

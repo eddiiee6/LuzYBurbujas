@@ -238,6 +238,8 @@ function photoPlate(plate: Plate, uid: string, tint?: string | null, wax?: strin
   const { w, h } = photoPlateBox(plate);
   // Contenedor: se dibuja la cera dentro para que no se vea vacío.
   const waxOn = (fit.waxOn ?? plate.kind === 'contenedor') && !!wax;
+  // Cera de color fijo (p. ej. blanca) o del mismo color que la vela.
+  const waxHex = fit.waxColor && fit.waxColor !== 'vela' ? fit.waxColor : wax;
   const wx = { ...DEFAULT_WAX, ...plate.photoFit };
   const waxRx = (w * wx.waxWidth) / 2;
   return {
@@ -257,11 +259,11 @@ function photoPlate(plate: Plate, uid: string, tint?: string | null, wax?: strin
           filter={recolor ? `url(#${uid}-tint)` : undefined}
         />
         {waxOn && fit.waxMode === 'pintado' && fit.waxMask ? (
-          <PaintedWax mask={fit.waxMask} box={fit.waxBox} w={w} h={h} color={wax!} uid={uid} />
+          <PaintedWax mask={fit.waxMask} box={fit.waxBox} w={w} h={h} color={waxHex!} uid={uid} />
         ) : (
           waxOn && (
             <g transform={`translate(0 ${fit.seatY + wx.waxY})`}>
-              <WaxSurface rx={waxRx} ry={waxRx * wx.waxTilt} color={wax!} uid={uid} />
+              <WaxSurface rx={waxRx} ry={waxRx * wx.waxTilt} color={waxHex!} uid={uid} />
             </g>
           )
         )}

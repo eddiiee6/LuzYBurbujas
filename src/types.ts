@@ -73,6 +73,8 @@ export interface PlatePhotoFit {
   waxTilt?: number;
   /** Subir (-) o bajar (+) la superficie de cera respecto al punto de apoyo. */
   waxY?: number;
+  /** Color de la cera: "vela" (igual que la vela, por defecto) o un color fijo (hex). */
+  waxColor?: string;
   /** "ovalo": la cera es un óvalo con los controles. "pintado": la zona que se pintó. */
   waxMode?: 'ovalo' | 'pintado';
   /** Máscara pintada (PNG blanco sobre transparente, mismo encuadre que la foto). */
