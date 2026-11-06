@@ -189,12 +189,53 @@ function WaxSurface({ rx, ry, color, uid }: { rx: number; ry: number; color: str
   );
 }
 
+/** Tamaño con el que se dibuja la foto de la placa (unidades del escenario). */
+export function photoPlateBox(plate: Plate) {
+  const fit = { ...DEFAULT_PLATE_FIT, ...plate.photoFit };
+  const w = plate.lengthCm * PX_PER_CM * fit.scale;
+  return { w, h: w * (plate.photoAspect ?? 0.5) * fit.squash };
+}
+
+/**
+ * Cera pintada a mano: la máscara (lo que se pintó) define la zona y se
+ * rellena con el color de la vela, más claro al centro y más oscuro en las
+ * orillas, con la orilla suavizada.
+ */
+function PaintedWax({ mask, box, w, h, color, uid }: { mask: string; box?: { x: number; y: number; w: number; h: number }; w: number; h: number; color: string; uid: string }) {
+  const b = box ?? { x: 0.2, y: 0.2, w: 0.6, h: 0.3 };
+  const bx = -w / 2 + b.x * w;
+  const by = -h / 2 + b.y * h;
+  const bw = b.w * w;
+  const bh = b.h * h;
+  return (
+    <g>
+      <defs>
+        <filter id={`${uid}-mblur`} x="-5%" y="-5%" width="110%" height="110%">
+          <feGaussianBlur stdDeviation="1.2" />
+        </filter>
+        <mask id={`${uid}-wm`} maskUnits="userSpaceOnUse" x={-w / 2} y={-h / 2} width={w} height={h}>
+          <image href={mask} x={-w / 2} y={-h / 2} width={w} height={h} preserveAspectRatio="none" filter={`url(#${uid}-mblur)`} />
+        </mask>
+        <radialGradient id={`${uid}-pw`} cx="0.45" cy="0.45" r="0.6">
+          <stop offset="0" stopColor={lighten(color, 0.5)} />
+          <stop offset="0.6" stopColor={lighten(color, 0.24)} />
+          <stop offset="1" stopColor={mix(color, '#7a5a4a', 0.2)} />
+        </radialGradient>
+      </defs>
+      <g mask={`url(#${uid}-wm)`}>
+        <rect x={-w / 2} y={-h / 2} width={w} height={h} fill={mix(color, '#7a5a4a', 0.25)} />
+        <ellipse cx={bx + bw / 2} cy={by + bh * 0.55} rx={bw * 0.56} ry={bh * 0.56} fill={`url(#${uid}-pw)`} />
+        <ellipse cx={bx + bw * 0.34} cy={by + bh * 0.38} rx={bw * 0.18} ry={bh * 0.12} fill="#ffffff" opacity={0.22} filter="url(#soft-blur)" />
+      </g>
+    </g>
+  );
+}
+
 function photoPlate(plate: Plate, uid: string, tint?: string | null, wax?: string): PlateRender {
   const recolor = !!tint && !!plate.photoTintable;
   // La foto viene recortada al borde de la placa: su ancho es el largo real.
   const fit = { ...DEFAULT_PLATE_FIT, ...plate.photoFit };
-  const w = plate.lengthCm * PX_PER_CM * fit.scale;
-  const h = w * (plate.photoAspect ?? 0.5) * fit.squash;
+  const { w, h } = photoPlateBox(plate);
   // Contenedor: se dibuja la cera dentro para que no se vea vacío.
   const waxOn = (fit.waxOn ?? plate.kind === 'contenedor') && !!wax;
   const wx = { ...DEFAULT_WAX, ...plate.photoFit };
@@ -215,10 +256,14 @@ function photoPlate(plate: Plate, uid: string, tint?: string | null, wax?: strin
           preserveAspectRatio="none"
           filter={recolor ? `url(#${uid}-tint)` : undefined}
         />
-        {waxOn && (
-          <g transform={`translate(0 ${fit.seatY + wx.waxY})`}>
-            <WaxSurface rx={waxRx} ry={waxRx * wx.waxTilt} color={wax!} uid={uid} />
-          </g>
+        {waxOn && fit.waxMode === 'pintado' && fit.waxMask ? (
+          <PaintedWax mask={fit.waxMask} box={fit.waxBox} w={w} h={h} color={wax!} uid={uid} />
+        ) : (
+          waxOn && (
+            <g transform={`translate(0 ${fit.seatY + wx.waxY})`}>
+              <WaxSurface rx={waxRx} ry={waxRx * wx.waxTilt} color={wax!} uid={uid} />
+            </g>
+          )
         )}
       </g>
     ),

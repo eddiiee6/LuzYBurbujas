@@ -73,6 +73,12 @@ export interface PlatePhotoFit {
   waxTilt?: number;
   /** Subir (-) o bajar (+) la superficie de cera respecto al punto de apoyo. */
   waxY?: number;
+  /** "ovalo": la cera es un óvalo con los controles. "pintado": la zona que se pintó. */
+  waxMode?: 'ovalo' | 'pintado';
+  /** Máscara pintada (PNG blanco sobre transparente, mismo encuadre que la foto). */
+  waxMask?: string;
+  /** Caja de lo pintado, en fracciones de la foto (0..1), para el brillo de la cera. */
+  waxBox?: { x: number; y: number; w: number; h: number };
 }
 
 export const DEFAULT_WAX = { waxWidth: 0.8, waxTilt: 0.32, waxY: 0 };
