@@ -1,8 +1,11 @@
-import { DEFAULT_MOLD_FIT, DEFAULT_PLATE_FIT, type Catalog, type Collection, type ColorOption, type Essence, type Mold, type MoldArt, type Plate } from '../types';
+import { DEFAULT_MOLD_FIT, DEFAULT_PLATE_FIT, DEFAULT_WAX, type Catalog, type Collection, type ColorOption, type Essence, type Mold, type MoldArt, type Plate } from '../types';
 import { Stage } from '../components/Stage';
 import { useState } from 'react';
 import { moldColors, plateColors, plateFits } from '../lib/rules';
 import { Check, ColorInput, Field, Num, PhotoInput, Select, Slider, Text, slugify } from './fields';
+import { WaxPainter } from './WaxPainter';
+import { photoPlateBox } from '../art/plates';
+import { friendlyError, repo } from '../data/repo';
 
 const pct = (v: number) => `${Math.round(v * 100)}%`;
 
@@ -202,6 +205,18 @@ export function MoldEditor({ item, set, catalog }: Ed<Mold>) {
 export function PlateEditor({ item, set, catalog }: Ed<Plate>) {
   const fit = { ...DEFAULT_PLATE_FIT, ...item.photoFit };
   const setFit = (patch: Partial<typeof fit>) => set({ photoFit: { ...fit, ...patch } });
+  const wax = { ...DEFAULT_WAX, ...item.photoFit };
+  const [painting, setPainting] = useState(false);
+  const [paintMsg, setPaintMsg] = useState<string | null>(null);
+  // Óvalo de los controles, en fracciones de la foto, para "Empezar con óvalo".
+  const box = photoPlateBox(item);
+  const waxRx = (box.w * wax.waxWidth) / 2;
+  const oval = {
+    cx: 0.5,
+    cy: (box.h / 2 + fit.seatY + wax.waxY) / box.h,
+    rx: wax.waxWidth / 2,
+    ry: (waxRx * wax.waxTilt) / box.h,
+  };
   const mold = catalog.molds.find((m) => m.active) ?? catalog.molds[0];
   const color = catalog.colors.find((c) => c.id === (mold?.photoColorId ?? mold?.defaultColorId))?.hex ?? '#f5a3c0';
   const platePreviewColors = plateColors(catalog.colors, item);
@@ -326,6 +341,57 @@ export function PlateEditor({ item, set, catalog }: Ed<Plate>) {
             />
             <Slider label="Punto de apoyo (arriba / abajo)" value={fit.seatY} min={-60} max={60} step={1} def={0} onChange={(seatY) => setFit({ seatY })} />
           </fieldset>
+        )}
+        {item.photo && item.kind === 'contenedor' && (
+          <fieldset className="afit">
+            <legend>Cera dentro del contenedor</legend>
+            <small>Se pinta del mismo color que la vela, para que se vea rellena y con la vela asentada.</small>
+            <Check label="Rellenar con cera" value={fit.waxOn ?? true} onChange={(waxOn) => setFit({ waxOn })} />
+            {(fit.waxOn ?? true) && (
+              <div className="chips" role="radiogroup" aria-label="Forma de la cera">
+                <button type="button" className="chip" role="radio" aria-checked={fit.waxMode !== 'pintado'} onClick={() => setFit({ waxMode: 'ovalo' })}>
+                  ⬭ Óvalo
+                </button>
+                <button type="button" className="chip" role="radio" aria-checked={fit.waxMode === 'pintado'} onClick={() => setFit({ waxMode: 'pintado' })}>
+                  🖌️ Pintada a mano
+                </button>
+              </div>
+            )}
+            {(fit.waxOn ?? true) && fit.waxMode === 'pintado' && (
+              <div className="paint-row">
+                {fit.waxMask ? <img className="paint-thumb" src={fit.waxMask} alt="Zona de cera pintada" /> : <span className="muted">Todavía no pintas la zona.</span>}
+                <button type="button" className="btn primary small" onClick={() => setPainting(true)}>
+                  {fit.waxMask ? '🖌️ Editar zona de cera' : '🖌️ Pintar zona de cera'}
+                </button>
+                {paintMsg && <small className="admin-msg">{paintMsg}</small>}
+              </div>
+            )}
+            {(fit.waxOn ?? true) && fit.waxMode !== 'pintado' && (
+              <>
+                <Slider label="Ancho de la cera" value={wax.waxWidth} min={0.3} max={1} step={0.01} def={DEFAULT_WAX.waxWidth} format={pct} onChange={(waxWidth) => setFit({ waxWidth })} />
+                <Slider label="Inclinación de la cera" value={wax.waxTilt} min={0.1} max={0.7} step={0.01} def={DEFAULT_WAX.waxTilt} format={pct} onChange={(waxTilt) => setFit({ waxTilt })} />
+                <Slider label="Altura de la cera (arriba / abajo)" value={wax.waxY} min={-60} max={60} step={1} def={DEFAULT_WAX.waxY} onChange={(waxY) => setFit({ waxY })} />
+              </>
+            )}
+          </fieldset>
+        )}
+        {painting && item.photo && (
+          <WaxPainter
+            photo={item.photo}
+            mask={fit.waxMask}
+            oval={oval}
+            onCancel={() => setPainting(false)}
+            onDone={async ({ blob, box: waxBox }) => {
+              try {
+                const waxMask = await repo.uploadImage(blob, `cera-${item.id}`);
+                setFit({ waxMode: 'pintado', waxMask, waxBox });
+                setPaintMsg('Listo. Revisa la vista previa y toca "Guardar cambios".');
+                setPainting(false);
+              } catch (e) {
+                throw new Error(friendlyError(e));
+              }
+            }}
+          />
         )}
         <Field label="¿Qué moldes caben?" hint="Se calcula con las medidas. Desmarca los que no caben aunque las medidas digan que sí.">
           <div className="fit-list">
