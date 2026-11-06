@@ -44,6 +44,7 @@ export function CartProvider({ children }: { children: ReactNode }) {
           i.colorId === d.colorId &&
           i.plateId === d.plateId &&
           i.veinColor === d.veinColor &&
+          (i.plateColorId ?? null) === (d.plateColorId ?? null) &&
           i.essenceId === d.essenceId,
       );
       if (same) return prev.map((i) => (i === same ? { ...i, qty: i.qty + qty } : i));
@@ -79,7 +80,11 @@ export function describeDesign(c: Catalog, d: Design): string[] {
   const plate = d.plateId ? c.plates.find((p) => p.id === d.plateId) : undefined;
   const essence = d.essenceId ? c.essences.find((e) => e.id === d.essenceId) : undefined;
   const lines = [`${typeLabel[d.type]} ${mold?.name ?? '¿?'} · color ${color?.name.toLowerCase() ?? '¿?'}`];
-  if (plate) lines.push(`${plate.name}${d.veinColor ? ` · vetas ${veinName(d.veinColor)}` : ''}`);
+  const plateColor = d.plateColorId ? c.colors.find((x) => x.id === d.plateColorId) : undefined;
+  if (plate)
+    lines.push(
+      `${plate.name}${plateColor ? ` · color ${plateColor.name.toLowerCase()}` : d.veinColor ? ` · vetas ${veinName(d.veinColor)}` : ''}`,
+    );
   else lines.push('Sin placa');
   lines.push(`Esencia: ${essence?.name ?? 'sin aroma'}`);
   return lines;

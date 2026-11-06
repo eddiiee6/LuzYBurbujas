@@ -72,7 +72,7 @@ export function PhotoInput({
 }: {
   value?: string;
   name: string;
-  onChange: (v: string | undefined, aspect?: number) => void;
+  onChange: (v: string | undefined, aspect?: number, luma?: number) => void;
 }) {
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState<string | null>(null);
@@ -92,8 +92,8 @@ export function PhotoInput({
               setBusy(true);
               setErr(null);
               try {
-                const { blob, aspect } = await prepareCutout(f);
-                onChange(await repo.uploadImage(blob, name), aspect);
+                const { blob, aspect, luma } = await prepareCutout(f);
+                onChange(await repo.uploadImage(blob, name), aspect, luma);
               } catch (x) {
                 setErr(friendlyError(x));
               } finally {
