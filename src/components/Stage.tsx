@@ -147,7 +147,15 @@ export const Stage = forwardRef<SVGSVGElement, StageProps>(function Stage(
         <g key={moldAnim} className={moldAnim ? 'anim-drop' : undefined}>
           {!plate && !bare && <ellipse cx={4} cy={-10 * pScale} rx={54 * pScale} ry={13 * pScale} fill="#5b3a2e" opacity={0.2} filter="url(#shadow-blur)" />}
           {plate?.kind === 'contenedor' && (
-            <ellipse cx={0} cy={-spec.footY * pScale * 0.7} rx={50 * pScale} ry={14 * pScale} fill={mix(color, '#3a2420', 0.55)} opacity={0.32} filter="url(#soft-blur)" />
+            <ellipse
+              cx={0}
+              cy={-spec.footY * pScale * 0.7}
+              rx={50 * pScale}
+              ry={14 * pScale}
+              fill={mix(plate.photoFit?.waxColor && plate.photoFit.waxColor !== 'vela' ? plate.photoFit.waxColor : color, '#3a2420', 0.55)}
+              opacity={0.32}
+              filter="url(#soft-blur)"
+            />
           )}
           <g transform={`scale(${pScale})`}>
             {product}
