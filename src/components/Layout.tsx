@@ -45,6 +45,7 @@ export default function Layout() {
             </NavLink>
             <NavLink to="/catalogo">Catálogo</NavLink>
             <NavLink to="/personaliza">Personaliza</NavLink>
+            <NavLink to="/arreglos">Arreglos</NavLink>
             <NavLink to="/pedido" className="cart-link">
               Mi pedido {count > 0 && <span className="badge">{count}</span>}
             </NavLink>

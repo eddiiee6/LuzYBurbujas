@@ -6,6 +6,8 @@ import type { Catalog } from '../types';
  * se cambian desde /admin.
  */
 export const seedCatalog: Catalog = {
+  arrangements: [],
+
   settings: {
     businessName: 'Luz y burbujas Lulú',
     tagline: 'Velas y jabones artesanales, hechos a mano con mucho amor',
@@ -143,6 +145,22 @@ export const seedCatalog: Catalog = {
       blockedMoldIds: [],
       active: true,
       order: 2,
+    },
+    {
+      id: 'cajita-flores-secas',
+      name: 'Cajita con flores secas',
+      description: 'Cajita de acetato con flores secas y moño. Medidas por confirmar.',
+      shape: 'rectangular',
+      kind: 'caja',
+      size: 'chica',
+      lengthCm: 6,
+      widthCm: 6,
+      heightCm: 9,
+      price: 15,
+      veinColors: [],
+      blockedMoldIds: [],
+      active: true,
+      order: 4,
     },
     {
       id: 'cesta',

@@ -1,5 +1,5 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useState, type ReactNode } from 'react';
-import type { CartItem, Catalog, Design } from '../types';
+import type { ArrangementItem, CartItem, Catalog, Design, DesignItem } from '../types';
 import { designPrice, money, typeLabel, veinName } from './rules';
 
 const LS_KEY = 'lyb.cart.v1';
@@ -7,6 +7,7 @@ const LS_KEY = 'lyb.cart.v1';
 interface CartState {
   items: CartItem[];
   add: (d: Design, qty?: number) => void;
+  addArrangement: (a: Omit<ArrangementItem, 'id' | 'kind' | 'qty'>, qty?: number) => void;
   setQty: (id: string, qty: number) => void;
   remove: (id: string) => void;
   clear: () => void;
@@ -38,7 +39,8 @@ export function CartProvider({ children }: { children: ReactNode }) {
   const add = useCallback((d: Design, qty = 1) => {
     setItems((prev) => {
       const same = prev.find(
-        (i) =>
+        (i): i is DesignItem =>
+          isDesign(i) &&
           i.moldId === d.moldId &&
           i.type === d.type &&
           i.colorId === d.colorId &&
@@ -52,6 +54,17 @@ export function CartProvider({ children }: { children: ReactNode }) {
     });
   }, []);
 
+  const addArrangement = useCallback((a: Omit<ArrangementItem, 'id' | 'kind' | 'qty'>, qty = 1) => {
+    setItems((prev) => {
+      const same = prev.find(
+        (i): i is ArrangementItem =>
+          !isDesign(i) && i.arrangementId === a.arrangementId && i.colors === a.colors && i.essenceId === a.essenceId,
+      );
+      if (same) return prev.map((i) => (i === same ? { ...i, qty: i.qty + qty } : i));
+      return [...prev, { ...a, kind: 'arreglo', id: crypto.randomUUID(), qty }];
+    });
+  }, []);
+
   const setQty = useCallback(
     (id: string, qty: number) =>
       setItems((prev) => prev.map((i) => (i.id === id ? { ...i, qty: Math.max(1, Math.min(999, qty)) } : i))),
@@ -61,8 +74,8 @@ export function CartProvider({ children }: { children: ReactNode }) {
   const clear = useCallback(() => setItems([]), []);
 
   const value = useMemo(
-    () => ({ items, add, setQty, remove, clear, count: items.reduce((s, i) => s + i.qty, 0) }),
-    [items, add, setQty, remove, clear],
+    () => ({ items, add, addArrangement, setQty, remove, clear, count: items.reduce((s, i) => s + i.qty, 0) }),
+    [items, add, addArrangement, setQty, remove, clear],
   );
   return <Ctx.Provider value={value}>{children}</Ctx.Provider>;
 }
@@ -90,6 +103,31 @@ export function describeDesign(c: Catalog, d: Design): string[] {
   return lines;
 }
 
+/** Los pedidos guardados antes de existir los arreglos no tienen "kind": son diseños. */
+export function isDesign(i: CartItem): i is DesignItem {
+  return i.kind !== 'arreglo';
+}
+
+/** ¿El artículo sigue existiendo en el catálogo? */
+export function itemExists(c: Catalog, i: CartItem): boolean {
+  return isDesign(i) ? c.molds.some((m) => m.id === i.moldId) : c.arrangements.some((a) => a.id === i.arrangementId);
+}
+
+export function itemPrice(c: Catalog, i: CartItem): number {
+  return isDesign(i) ? designPrice(c, i) : (c.arrangements.find((a) => a.id === i.arrangementId)?.price ?? 0);
+}
+
+/** Texto legible de cualquier artículo del pedido. */
+export function describeItem(c: Catalog, i: CartItem): string[] {
+  if (isDesign(i)) return describeDesign(c, i);
+  const a = c.arrangements.find((x) => x.id === i.arrangementId);
+  const essence = i.essenceId ? c.essences.find((e) => e.id === i.essenceId) : undefined;
+  const lines = [`Arreglo ${a?.name ?? '¿?'}`];
+  lines.push(i.colors.trim() ? `Colores: ${i.colors.trim()}` : 'Colores como en la foto');
+  lines.push(`Esencia: ${essence?.name ?? 'sin aroma'}`);
+  return lines;
+}
+
 export interface Customer {
   name: string;
   date: string;
@@ -97,13 +135,13 @@ export interface Customer {
 }
 
 export function whatsappLink(c: Catalog, items: CartItem[], customer: Customer): string {
-  const total = items.reduce((s, i) => s + designPrice(c, i) * i.qty, 0);
+  const total = items.reduce((s, i) => s + itemPrice(c, i) * i.qty, 0);
   const parts: string[] = [`¡Hola ${c.settings.businessName}! 🌸 Quiero hacer este pedido:`, ''];
   items.forEach((it, n) => {
-    const [first, ...rest] = describeDesign(c, it);
+    const [first, ...rest] = describeItem(c, it);
     parts.push(`${n + 1}. ${it.qty} × ${first}`);
     rest.forEach((l) => parts.push(`   ${l}`));
-    parts.push(`   ${money(designPrice(c, it))} c/u`);
+    parts.push(`   ${money(itemPrice(c, it))} c/u`);
   });
   parts.push('', `Total aproximado: ${money(total)}`);
   if (customer.name.trim()) parts.push(`Nombre: ${customer.name.trim()}`);

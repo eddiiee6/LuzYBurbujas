@@ -1,8 +1,8 @@
-import { DEFAULT_MOLD_FIT, DEFAULT_PLATE_FIT, DEFAULT_WAX, type Catalog, type Collection, type ColorOption, type Essence, type Mold, type MoldArt, type Plate } from '../types';
+import { DEFAULT_MOLD_FIT, DEFAULT_PLATE_FIT, DEFAULT_WAX, type Arrangement, type Catalog, type Collection, type ColorOption, type Essence, type Mold, type MoldArt, type Plate } from '../types';
 import { Stage } from '../components/Stage';
 import { useState } from 'react';
 import { moldColors, plateColors, plateFits, plateTypes } from '../lib/rules';
-import { Check, ColorInput, Field, Num, PhotoInput, Select, Slider, Text, slugify } from './fields';
+import { Check, ColorInput, Field, Num, PhotoInput, PhotoList, Select, Slider, Text, slugify } from './fields';
 import { WaxPainter } from './WaxPainter';
 import { photoPlateBox } from '../art/plates';
 import { friendlyError, repo } from '../data/repo';
@@ -209,6 +209,7 @@ export function PlateEditor({ item, set, catalog }: Ed<Plate>) {
   const setFit = (patch: Partial<typeof fit>) => set({ photoFit: { ...fit, ...patch } });
   const wax = { ...DEFAULT_WAX, ...item.photoFit };
   const [painting, setPainting] = useState(false);
+  const [paintingFront, setPaintingFront] = useState(false);
   const [paintMsg, setPaintMsg] = useState<string | null>(null);
   // Óvalo de los controles, en fracciones de la foto, para "Empezar con óvalo".
   const box = photoPlateBox(item);
@@ -253,6 +254,7 @@ export function PlateEditor({ item, set, catalog }: Ed<Plate>) {
               options={[
                 { value: 'plana', label: 'Plana' },
                 { value: 'contenedor', label: 'Contenedor' },
+                { value: 'caja', label: 'Cajita de regalo' },
               ]}
             />
           </Field>
@@ -411,6 +413,39 @@ export function PlateEditor({ item, set, catalog }: Ed<Plate>) {
             )}
           </fieldset>
         )}
+        {item.photo && item.kind === 'caja' && (
+          <fieldset className="afit">
+            <legend>Lo que va delante del producto</legend>
+            <small>
+              Pinta el acetato del frente, el moño y el relleno de enfrente. Eso se dibuja encima de la vela o el jabón para que se vea dentro de
+              la cajita. Usa la foto de la cajita vacía.
+            </small>
+            <div className="paint-row">
+              {fit.frontMask ? <img className="paint-thumb" src={fit.frontMask} alt="Zona del frente pintada" /> : <span className="muted">Todavía no pintas el frente.</span>}
+              <button type="button" className="btn primary small" onClick={() => setPaintingFront(true)}>
+                {fit.frontMask ? '🖌️ Editar el frente' : '🖌️ Pintar el frente'}
+              </button>
+            </div>
+          </fieldset>
+        )}
+        {paintingFront && item.photo && (
+          <WaxPainter
+            photo={item.photo}
+            mask={fit.frontMask}
+            title="Pinta lo que va delante del producto"
+            hint="Lo rosa queda por encima de la vela o el jabón."
+            onCancel={() => setPaintingFront(false)}
+            onDone={async ({ blob }) => {
+              try {
+                const frontMask = await repo.uploadImage(blob, `frente-${item.id}`);
+                setFit({ frontMask });
+                setPaintingFront(false);
+              } catch (e) {
+                throw new Error(friendlyError(e));
+              }
+            }}
+          />
+        )}
         {painting && item.photo && (
           <WaxPainter
             photo={item.photo}
@@ -549,6 +584,44 @@ export function CollectionEditor({ item, set }: Ed<Collection>) {
           <ColorInput value={item.theme.accent} onChange={(accent) => set({ theme: { ...item.theme, accent } })} />
         </Field>
       </div>
+    </div>
+  );
+}
+
+export function ArrangementEditor({ item, set }: Ed<Arrangement>) {
+  return (
+    <div className="editor-fields">
+      <Field label="Nombre">
+        <Text value={item.name} onChange={(name) => set({ name, slug: item.slug || slugify(name) })} />
+      </Field>
+      <Field label="Dirección web" hint={`/arreglos/${item.slug}`}>
+        <Text value={item.slug} onChange={(v) => set({ slug: slugify(v) })} />
+      </Field>
+      <Field label="Descripción">
+        <textarea rows={3} value={item.description} onChange={(e) => set({ description: e.target.value })} />
+      </Field>
+      <Field label="Qué incluye" hint="Una pieza por renglón. Ej. Vela tulipán, Jabón mariposa, Flores secas, Musgo, Cesta.">
+        <textarea
+          rows={5}
+          value={item.includes.join('\n')}
+          onChange={(e) => set({ includes: e.target.value.split('\n') })}
+          onBlur={(e) => set({ includes: e.target.value.split('\n').map((l) => l.trim()).filter(Boolean) })}
+        />
+      </Field>
+      <Field label="Precio">
+        <Num step={1} value={item.price} onChange={(v) => set({ price: v ?? 0 })} />
+      </Field>
+      <Field label="Fotos" hint="Fotos reales del arreglo, con fondo. La primera es la principal.">
+        <PhotoList value={item.photos} name={item.slug || item.id} onChange={(photos) => set({ photos })} />
+      </Field>
+      <Check label="El cliente puede pedirlo en otros colores" value={item.customColors} onChange={(customColors) => set({ customColors })} />
+      <div className="row2">
+        <Check label="Visible en el sitio" value={item.active} onChange={(active) => set({ active })} />
+        <Check label="Destacado en inicio" value={!!item.featured} onChange={(featured) => set({ featured })} />
+      </div>
+      <Field label="Orden">
+        <Num step={1} value={item.order} onChange={(v) => set({ order: v ?? 0 })} />
+      </Field>
     </div>
   );
 }
