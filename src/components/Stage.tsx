@@ -25,6 +25,11 @@ export interface StageProps {
   dragPlate?: number;
   /** Sin fondo ni mesa (para tarjetas pequeñas). */
   bare?: boolean;
+  /**
+   * Estilo del fondo. "estudio": pared y mesa lisas con luz suave, para fotos
+   * reales. "ilustrado": burbujas y mesa dibujada. Por defecto: estudio si hay foto.
+   */
+  backdrop?: 'estudio' | 'ilustrado';
   className?: string;
 }
 
@@ -33,7 +38,7 @@ const SEAT = 268;
 
 /** Escenario en capas: fondo → placa (atrás) → producto → placa (frente). */
 export const Stage = forwardRef<SVGSVGElement, StageProps>(function Stage(
-  { mold, type, color, colorId, plate, veinColor, plateColor, theme, lit, moldAnim, plateAnim, dragMold = 0, dragPlate = 0, bare, className },
+  { mold, type, color, colorId, plate, veinColor, plateColor, theme, lit, moldAnim, plateAnim, dragMold = 0, dragPlate = 0, bare, backdrop, className },
   ref,
 ) {
   const uid = useId().replace(/:/g, '');
@@ -48,6 +53,7 @@ export const Stage = forwardRef<SVGSVGElement, StageProps>(function Stage(
   const pScale = scale * (pr?.productScale ?? 1);
   const productY = SEAT + (pr?.seatY ?? 0) + spec.footY * pScale;
   const bg = theme ?? { bg: '#fde8f0', bg2: '#f3e3fb', accent: '#e5487f' };
+  const studio = (backdrop ?? (mold.photo || plate?.photo ? 'estudio' : 'ilustrado')) === 'estudio';
 
   // Encuadre vertical: los moldes altos (pino) suben la cámara un poco.
   const topY = productY - spec.height * pScale - (type === 'vela' ? 30 : 0);
@@ -110,7 +116,40 @@ export const Stage = forwardRef<SVGSVGElement, StageProps>(function Stage(
         </radialGradient>
       </defs>
 
-      {!bare && (
+      {!bare && studio && (
+        <g>
+          <defs>
+            <linearGradient id={`${uid}-wall`} x1="0" y1="0" x2="0" y2="1">
+              <stop offset="0" stopColor={mix(bg.bg, '#ffffff', 0.55)} />
+              <stop offset="1" stopColor={mix(bg.bg, '#ffffff', 0.15)} />
+            </linearGradient>
+            {/* la mesa nace transparente: sin línea dura entre pared y mesa */}
+            <linearGradient id={`${uid}-desk`} x1="0" y1="0" x2="0" y2="1">
+              <stop offset="0" stopColor={mix(bg.bg, '#e9dccf', 0.3)} stopOpacity="0" />
+              <stop offset="0.3" stopColor={mix(bg.bg, '#e9dccf', 0.3)} stopOpacity="0.9" />
+              <stop offset="0.55" stopColor={mix(bg.bg, '#fffaf5', 0.55)} />
+              <stop offset="1" stopColor={mix(bg.bg, '#fffaf5', 0.8)} />
+            </linearGradient>
+            <radialGradient id={`${uid}-spot`} cx="0.5" cy="0.5" r="0.5">
+              <stop offset="0" stopColor="#ffffff" stopOpacity="0.85" />
+              <stop offset="1" stopColor="#ffffff" stopOpacity="0" />
+            </radialGradient>
+            <radialGradient id={`${uid}-vig`} cx="0.5" cy="0.45" r="0.75">
+              <stop offset="0.6" stopColor="#3a2420" stopOpacity="0" />
+              <stop offset="1" stopColor="#3a2420" stopOpacity="0.12" />
+            </radialGradient>
+          </defs>
+          {/* pared */}
+          <rect x={-20} y={shift - 20} width={440} height={480} fill={`url(#${uid}-wall)`} />
+          {/* mesa: el horizonte queda detrás del producto, con orilla difuminada */}
+          <rect x={-20} y={SEAT - 130} width={440} height={330} fill={`url(#${uid}-desk)`} />
+          {/* luz suave detrás del producto */}
+          <ellipse cx={CX} cy={SEAT - 90} rx={170} ry={130} fill={`url(#${uid}-spot)`} />
+          <rect x={-20} y={shift - 20} width={440} height={480} fill={`url(#${uid}-vig)`} />
+        </g>
+      )}
+
+      {!bare && !studio && (
         <g>
           <rect x={-20} y={shift - 20} width={440} height={460} fill={`url(#${uid}-bg)`} />
           {/* burbujas y luces de fondo */}

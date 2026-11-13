@@ -1,20 +1,16 @@
 import { Link } from 'react-router-dom';
-import { useCatalog, useLookup } from '../data/CatalogContext';
-import { Stage } from '../components/Stage';
+import { useCatalog } from '../data/CatalogContext';
+import { HeroShowcase } from '../components/HeroShowcase';
 import { MoldCard } from '../components/MoldCard';
 import { ArrangementCard } from './Arrangements';
 import { whatsappHello } from '../lib/cart';
-import { displayColorId } from '../lib/rules';
 
 export default function Home() {
   const { catalog } = useCatalog();
-  const look = useLookup();
   const molds = catalog.molds.filter((m) => m.active);
   const activeArr = catalog.arrangements.filter((a) => a.active);
   const arrangements = (activeArr.some((a) => a.featured) ? activeArr.filter((a) => a.featured) : activeArr).slice(0, 3);
   const featured = molds.filter((m) => m.featured).length ? molds.filter((m) => m.featured) : molds.slice(0, 3);
-  const hero = molds[0];
-  const heroPlate = catalog.plates.find((p) => p.active && p.kind === 'plana') ?? null;
 
   return (
     <main>
@@ -42,20 +38,7 @@ export default function Home() {
               <li>🎁 Ideal para regalo</li>
             </ul>
           </div>
-          {hero && (
-            <Link to="/personaliza" className="hero-art" aria-label="Ir al personalizador">
-              <Stage
-                mold={hero}
-                type="vela"
-                color={look.color.get(displayColorId(hero))?.hex ?? '#f5a3c0'}
-                colorId={displayColorId(hero)}
-                plate={heroPlate}
-                veinColor={heroPlate?.veinColors[0] ?? null}
-                theme={look.collection.get(hero.collectionId)?.theme}
-                lit
-              />
-            </Link>
-          )}
+          <HeroShowcase />
         </div>
       </section>
 
