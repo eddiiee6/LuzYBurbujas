@@ -3,6 +3,7 @@ import { useLookup } from '../data/CatalogContext';
 import { availableTypes, displayColorId, money, typeLabel } from '../lib/rules';
 import type { Mold } from '../types';
 import { Stage } from './Stage';
+import { coverPhoto } from '../lib/gallery';
 
 export function MoldCard({ mold }: { mold: Mold }) {
   const look = useLookup();
@@ -13,7 +14,11 @@ export function MoldCard({ mold }: { mold: Mold }) {
   return (
     <Link to={`/personaliza?molde=${mold.slug}`} className="mold-card" style={{ ['--card-bg' as string]: theme?.bg ?? '#fde8f0' }}>
       <div className="mold-card-art">
-        <Stage bare mold={mold} type={types.includes('vela') ? 'vela' : 'jabon'} color={color} colorId={colorId} plate={null} veinColor={null} />
+        {coverPhoto(mold) ? (
+          <img className="card-photo" src={coverPhoto(mold)!.url} alt={mold.name} loading="lazy" />
+        ) : (
+          <Stage bare mold={mold} type={types.includes('vela') ? 'vela' : 'jabon'} color={color} colorId={colorId} plate={null} veinColor={null} />
+        )}
       </div>
       <div className="mold-card-body">
         <span className="eyebrow">{look.collection.get(mold.collectionId)?.name}</span>

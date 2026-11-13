@@ -2,6 +2,7 @@ import { useMemo, useRef, useState, type PointerEvent } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
 import { useCatalog, useLookup } from '../data/CatalogContext';
 import { Stage, stageToPng } from '../components/Stage';
+import { photosFor } from '../lib/gallery';
 import { Chips, Picker, Swatches } from '../components/Picker';
 import { useCart } from '../lib/cart';
 import { availableTypes, designPrice, displayColorId, moldColors, money, plateAllowsType, plateColors, plateKindLabel, plateFits, typeLabel, veinName } from '../lib/rules';
@@ -46,6 +47,7 @@ export default function Customizer() {
   const essence = look.essence.get(params.get('esencia') ?? '') ?? null;
 
   const [lit, setLit] = useState(true);
+  const [photoIdx, setPhotoIdx] = useState(0);
   // El texto de "desliza…" se oculta después de la primera vez que se usa.
   const [hintSeen, setHintSeen] = useState(() => {
     try {
@@ -108,6 +110,7 @@ export default function Customizer() {
     const t = availableTypes(m).includes(type) ? type : availableTypes(m)[0];
     update({ molde: m.slug, tipo: t ?? null, color: displayColorId(m) });
     setAnim((a) => ({ ...a, mold: a.mold + 1 }));
+    setPhotoIdx(0);
   };
   const stepPlate = (dir: 1 | -1) => {
     markHint();
@@ -115,6 +118,7 @@ export default function Customizer() {
     const p = plateOptions[(i + dir + plateOptions.length) % plateOptions.length];
     update({ placa: p ? p.id : 'ninguna', veta: null, colorplaca: null });
     setAnim((a) => ({ ...a, plate: a.plate + 1 }));
+    setPhotoIdx(0);
   };
 
   /* ---------- deslizar con el dedo sobre el escenario ---------- */
@@ -151,13 +155,22 @@ export default function Customizer() {
     }
   };
 
+  // Foto real de esta combinación (molde + presentación + tipo), si existe.
+  const realPhotos = photosFor(mold, plate?.id ?? null, type, color.id);
+  const realPhoto = realPhotos.length ? realPhotos[photoIdx % realPhotos.length] : null;
+  const photoColor = realPhoto?.colorId ? look.color.get(realPhoto.colorId) : undefined;
+
   const download = async () => {
-    if (!svgRef.current) return;
     try {
-      const blob = await stageToPng(svgRef.current);
+      const blob = realPhoto
+        ? await (await fetch(realPhoto.url)).blob()
+        : svgRef.current
+          ? await stageToPng(svgRef.current)
+          : null;
+      if (!blob) return;
       const a = document.createElement('a');
       a.href = URL.createObjectURL(blob);
-      a.download = `${mold.slug}-${color.id}.png`;
+      a.download = `${mold.slug}-${color.id}.${realPhoto ? (blob.type.split('/')[1] ?? 'jpg') : 'png'}`;
       a.click();
       setTimeout(() => URL.revokeObjectURL(a.href), 2000);
     } catch {
@@ -186,6 +199,37 @@ export default function Customizer() {
           onPointerUp={onUp}
           onPointerCancel={() => setDrag(null)}
         >
+          {realPhoto ? (
+            <div className="real-photo">
+              <img
+                key={realPhoto.url}
+                className="anim-fade"
+                src={realPhoto.url}
+                alt={`${mold.name}${plate ? ` en ${plate.name.toLowerCase()}` : ''}`}
+                draggable={false}
+                style={drag ? { transform: `translateX(${(drag.dx * 100) / 400}%)` } : undefined}
+              />
+              <span className="real-badge">📷 Foto real</span>
+              {photoColor && photoColor.id !== color.id && (
+                <span className="real-note">
+                  Foto de referencia en {photoColor.name.toLowerCase()} · la tuya será {color.name.toLowerCase()}
+                </span>
+              )}
+              {realPhotos.length > 1 && (
+                <div className="real-dots" onPointerDown={(e) => e.stopPropagation()}>
+                  {realPhotos.map((g, i) => (
+                    <button
+                      key={g.id}
+                      type="button"
+                      aria-label={`Foto ${i + 1}`}
+                      aria-pressed={g === realPhoto}
+                      onClick={() => setPhotoIdx(i)}
+                    />
+                  ))}
+                </div>
+              )}
+            </div>
+          ) : (
           <Stage
             ref={svgRef}
             className="stage"
@@ -203,12 +247,13 @@ export default function Customizer() {
             dragMold={drag?.zone === 'mold' ? drag.dx : 0}
             dragPlate={drag?.zone === 'plate' ? drag.dx : 0}
           />
+          )}
           {!fit.ok && <div className="stage-badge">🚫 {fit.reason}</div>}
           <div className="stage-hint" aria-hidden style={hintSeen ? { opacity: 0 } : undefined}>
             <span>⇆ desliza arriba para cambiar el molde</span>
             <span>⇆ desliza abajo para cambiar la placa</span>
           </div>
-          {type === 'vela' && !mold.photo && (
+          {type === 'vela' && !mold.photo && !realPhoto && (
             <button type="button" className="lit-toggle" onClick={() => setLit(!lit)} onPointerDown={(e) => e.stopPropagation()}>
               {lit ? '🕯️ Apagar' : '🔥 Encender'}
             </button>
@@ -248,7 +293,11 @@ export default function Customizer() {
                   setAnim((a) => ({ ...a, mold: a.mold + 1 }));
                 }}
               >
-                <Stage bare mold={m} type="jabon" color={look.color.get(displayColorId(m))?.hex ?? '#f5a3c0'} colorId={displayColorId(m)} plate={null} veinColor={null} />
+                {m.gallery?.length ? (
+                  <img className="thumb-photo" src={m.gallery[0].url} alt="" />
+                ) : (
+                  <Stage bare mold={m} type="jabon" color={look.color.get(displayColorId(m))?.hex ?? '#f5a3c0'} colorId={displayColorId(m)} plate={null} veinColor={null} />
+                )}
               </button>
             ))}
           </div>

@@ -410,6 +410,31 @@ textarea {
   position: relative;
 }
 
+.hero-photo,
+.card-photo,
+.thumb-photo {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.mold-card-art:has(.card-photo) {
+  padding: 0;
+  position: relative;
+  overflow: hidden;
+}
+
+.mold-card-art .card-photo {
+  position: absolute;
+  inset: 0;
+}
+
+.thumb:has(.thumb-photo) {
+  padding: 0;
+  overflow: hidden;
+}
+
 .hero-caption {
   position: absolute;
   left: 14px;
@@ -778,6 +803,79 @@ textarea {
   display: block;
   width: 100%;
   height: 100%;
+}
+
+.real-photo {
+  position: absolute;
+  inset: 0;
+  background: var(--pink-50);
+}
+
+.real-photo img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+  user-select: none;
+  -webkit-user-drag: none;
+}
+
+.real-badge {
+  position: absolute;
+  top: 12px;
+  left: 12px;
+  padding: 4px 10px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.9);
+  font-size: 0.8rem;
+  font-weight: 600;
+}
+
+.real-note {
+  position: absolute;
+  left: 12px;
+  right: 12px;
+  bottom: 44px;
+  padding: 6px 10px;
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.9);
+  font-size: 0.82rem;
+  text-align: center;
+}
+
+.real-dots {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 14px;
+  display: flex;
+  justify-content: center;
+  gap: 6px;
+}
+
+.real-dots button {
+  width: 9px;
+  height: 9px;
+  padding: 0;
+  border: 2px solid #fff;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.5);
+  cursor: pointer;
+}
+
+.real-dots button[aria-pressed='true'] {
+  background: #fff;
+  width: 22px;
+}
+
+.anim-fade {
+  animation: fade 0.35s ease;
+}
+
+@keyframes fade {
+  from {
+    opacity: 0;
+  }
 }
 
 .stage-badge {
@@ -1183,6 +1281,39 @@ textarea {
   height: 100%;
   font-size: 2rem;
   background: var(--pink-100);
+}
+
+.gallery-editor {
+  display: grid;
+  gap: 10px;
+}
+
+.gallery-row {
+  display: grid;
+  grid-template-columns: 96px 1fr;
+  gap: 10px;
+  align-items: start;
+  padding: 8px;
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  background: var(--white);
+}
+
+.gallery-row img {
+  width: 96px;
+  height: 96px;
+  object-fit: cover;
+  border-radius: 10px;
+}
+
+.gallery-tags {
+  display: grid;
+  gap: 6px;
+}
+
+.gallery-tags select {
+  padding: 6px 8px;
+  font-size: 0.85rem;
 }
 
 .aphotos {

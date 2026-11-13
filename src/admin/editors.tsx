@@ -1,9 +1,10 @@
-import { DEFAULT_MOLD_FIT, DEFAULT_PLATE_FIT, DEFAULT_WAX, type Arrangement, type Catalog, type Collection, type ColorOption, type Essence, type Mold, type MoldArt, type Plate } from '../types';
+import { DEFAULT_MOLD_FIT, DEFAULT_PLATE_FIT, DEFAULT_WAX, type Arrangement, type Catalog, type Collection, type ColorOption, type Essence, type GalleryPhoto, type Mold, type MoldArt, type Plate } from '../types';
 import { Stage } from '../components/Stage';
 import { useState } from 'react';
 import { moldColors, plateColors, plateFits, plateTypes } from '../lib/rules';
 import { Check, ColorInput, Field, Num, PhotoInput, PhotoList, Select, Slider, Text, slugify } from './fields';
 import { WaxPainter } from './WaxPainter';
+import { prepareCutout } from '../lib/image';
 import { photoPlateBox } from '../art/plates';
 import { friendlyError, repo } from '../data/repo';
 
@@ -118,7 +119,15 @@ export function MoldEditor({ item, set, catalog }: Ed<Mold>) {
             <Num step={1} value={item.prices.vela} onChange={(v) => set({ prices: { ...item.prices, vela: v } })} />
           </Field>
         </div>
-        <Field label="Foto sin fondo" hint="PNG o WebP transparente, tomada de frente y un poco desde arriba.">
+        <fieldset className="afit">
+          <legend>📷 Fotos reales (galería)</legend>
+          <small>
+            Las mismas de Instagram. En cada una indica la presentación (sola, placa, cesta, cajita). Si el cliente elige una combinación que
+            tiene foto, se ve la foto tal cual; si no, se usa el montaje.
+          </small>
+          <GalleryEditor mold={item} catalog={catalog} onChange={(gallery) => set({ gallery })} />
+        </fieldset>
+        <Field label="Foto sin fondo (para el montaje)" hint="PNG o WebP transparente, tomada de frente y un poco desde arriba.">
           <PhotoInput value={item.photo} name={item.slug} onChange={(photo, photoAspect, photoLuma) => set({ photo, photoAspect, photoLuma })} />
         </Field>
         {item.photo && (
@@ -622,6 +631,94 @@ export function ArrangementEditor({ item, set }: Ed<Arrangement>) {
       <Field label="Orden">
         <Num step={1} value={item.order} onChange={(v) => set({ order: v ?? 0 })} />
       </Field>
+    </div>
+  );
+}
+
+/** Galería de fotos reales de un molde, cada una etiquetada con su presentación. */
+function GalleryEditor({ mold, catalog, onChange }: { mold: Mold; catalog: Catalog; onChange: (g: GalleryPhoto[]) => void }) {
+  const gallery = mold.gallery ?? [];
+  const [busy, setBusy] = useState(false);
+  const [err, setErr] = useState<string | null>(null);
+  const update = (i: number, patch: Partial<GalleryPhoto>) => onChange(gallery.map((g, j) => (j === i ? { ...g, ...patch } : g)));
+  const move = (i: number, d: -1 | 1) => {
+    const j = i + d;
+    if (j < 0 || j >= gallery.length) return;
+    const next = [...gallery];
+    [next[i], next[j]] = [next[j], next[i]];
+    onChange(next);
+  };
+  const plates = catalog.plates;
+  return (
+    <div className="gallery-editor">
+      {gallery.map((g, i) => (
+        <div key={g.id} className="gallery-row">
+          <img src={g.url} alt="" />
+          <div className="gallery-tags">
+            <Select
+              value={g.plateId ?? ''}
+              onChange={(v) => update(i, { plateId: v || null })}
+              options={[{ value: '', label: 'Sola (sin placa)' }, ...plates.map((p) => ({ value: p.id, label: p.name }))]}
+            />
+            <Select
+              value={g.type ?? ''}
+              onChange={(v) => update(i, { type: (v || null) as GalleryPhoto['type'] })}
+              options={[
+                { value: '', label: 'Vela y jabón' },
+                { value: 'vela', label: 'Vela' },
+                { value: 'jabon', label: 'Jabón' },
+              ]}
+            />
+            <Select
+              value={g.colorId ?? ''}
+              onChange={(v) => update(i, { colorId: v || null })}
+              options={[{ value: '', label: 'Color: no indicar' }, ...catalog.colors.map((c) => ({ value: c.id, label: `Color: ${c.name}` }))]}
+            />
+            <div className="aphotos-actions">
+              <button type="button" className="link-btn" onClick={() => move(i, -1)} disabled={i === 0} aria-label="Mover antes">
+                ↑
+              </button>
+              <button type="button" className="link-btn" onClick={() => onChange(gallery.filter((_, j) => j !== i))}>
+                Quitar
+              </button>
+              <button type="button" className="link-btn" onClick={() => move(i, 1)} disabled={i === gallery.length - 1} aria-label="Mover después">
+                ↓
+              </button>
+            </div>
+            {i === 0 && <small className="muted">Portada del molde en el catálogo</small>}
+          </div>
+        </div>
+      ))}
+      <label className="btn ghost small">
+        {busy ? 'Subiendo…' : '+ Agregar fotos reales'}
+        <input
+          type="file"
+          accept="image/png,image/webp,image/jpeg"
+          multiple
+          hidden
+          onChange={async (e) => {
+            const files = Array.from(e.target.files ?? []);
+            if (!files.length) return;
+            setBusy(true);
+            setErr(null);
+            try {
+              const added: GalleryPhoto[] = [];
+              for (const f of files) {
+                const { blob } = await prepareCutout(f, 1200);
+                const url = await repo.uploadImage(blob, `${mold.slug || mold.id}-foto`);
+                added.push({ id: Math.random().toString(36).slice(2, 10), url, plateId: null, type: null, colorId: null });
+              }
+              onChange([...gallery, ...added]);
+            } catch (x) {
+              setErr(friendlyError(x));
+            } finally {
+              setBusy(false);
+              e.target.value = '';
+            }
+          }}
+        />
+      </label>
+      {err && <small className="warn">{err}</small>}
     </div>
   );
 }

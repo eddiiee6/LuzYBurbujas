@@ -44,9 +44,23 @@ export interface Mold {
   photoLuma?: number;
   /** Colores que se ofrecen para este molde. Vacío o sin definir = todos. */
   allowedColorIds?: string[];
+  /** Fotos reales por presentación. Si hay una para la combinación elegida, se muestra en lugar del montaje. */
+  gallery?: GalleryPhoto[];
   active: boolean;
   featured?: boolean;
   order: number;
+}
+
+/** Foto real del producto (p. ej. la misma del carrusel de Instagram), etiquetada. */
+export interface GalleryPhoto {
+  id: string;
+  url: string;
+  /** Presentación en la foto (id de placa/cesta/cajita). null = el producto solo. */
+  plateId: string | null;
+  /** Si es vela o jabón. null = sirve para los dos. */
+  type?: ProductType | null;
+  /** Color del producto en la foto (id de Color). Solo informativo. */
+  colorId?: string | null;
 }
 
 export interface MoldPhotoFit {

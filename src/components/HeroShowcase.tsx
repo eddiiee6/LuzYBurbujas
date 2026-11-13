@@ -2,13 +2,15 @@ import { useEffect, useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useCatalog, useLookup } from '../data/CatalogContext';
 import { availableTypes, displayColorId, money, plateFits, typeLabel } from '../lib/rules';
-import type { Mold, Plate, ProductType } from '../types';
+import type { GalleryPhoto, Mold, Plate, ProductType } from '../types';
 import { Stage } from './Stage';
 
 interface Slide {
   mold: Mold;
   type: ProductType;
   plate: Plate | null;
+  /** Foto real (galería del molde); si no hay, se arma con el escenario. */
+  photo?: GalleryPhoto;
 }
 
 const EVERY_MS = 4500;
@@ -24,6 +26,18 @@ export function HeroShowcase() {
 
   const slides = useMemo<Slide[]>(() => {
     const molds = catalog.molds.filter((m) => m.active);
+    // 1º: moldes con fotos reales en su galería (se usa la primera foto tal cual).
+    const gallerySlides: Slide[] = molds
+      .filter((m) => m.gallery?.length)
+      .sort((a, b) => Number(!!b.featured) - Number(!!a.featured))
+      .map((mold) => {
+        const photo = mold.gallery![0];
+        const types = availableTypes(mold);
+        const type: ProductType = photo.type ?? (types.includes('vela') ? 'vela' : (types[0] ?? 'jabon'));
+        const plate = photo.plateId ? (catalog.plates.find((p) => p.id === photo.plateId) ?? null) : null;
+        return { mold, type, plate, photo };
+      });
+    if (gallerySlides.length) return gallerySlides;
     const withPhoto = molds.filter((m) => m.photo);
     const pool = (withPhoto.length ? withPhoto : molds.slice(0, 1)).sort(
       (a, b) => Number(!!b.featured) - Number(!!a.featured),
@@ -58,18 +72,22 @@ export function HeroShowcase() {
   return (
     <div className="hero-showcase" onMouseEnter={() => setPaused(true)} onMouseLeave={() => setPaused(false)}>
       <Link to={`/personaliza?${params}`} className="hero-art" aria-label={`Personalizar ${mold.name}`}>
-        <Stage
-          mold={mold}
-          type={type}
-          color={look.color.get(colorId)?.hex ?? '#f5a3c0'}
-          colorId={colorId}
-          plate={plate}
-          veinColor={plate?.veinColors[0] ?? null}
-          theme={look.collection.get(mold.collectionId)?.theme}
-          moldAnim={`h${index}`}
-          plateAnim={`h${index}`}
-          lit
-        />
+        {slide.photo ? (
+          <img key={slide.photo.url} className="hero-photo anim-fade" src={slide.photo.url} alt={mold.name} />
+        ) : (
+          <Stage
+            mold={mold}
+            type={type}
+            color={look.color.get(colorId)?.hex ?? '#f5a3c0'}
+            colorId={colorId}
+            plate={plate}
+            veinColor={plate?.veinColors[0] ?? null}
+            theme={look.collection.get(mold.collectionId)?.theme}
+            moldAnim={`h${index}`}
+            plateAnim={`h${index}`}
+            lit
+          />
+        )}
         <span className="hero-caption">
           <b>{mold.name}</b>
           <span>
