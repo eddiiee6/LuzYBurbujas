@@ -4,7 +4,7 @@ import { useCatalog, useLookup } from '../data/CatalogContext';
 import { Stage, stageToPng } from '../components/Stage';
 import { Chips, Picker, Swatches } from '../components/Picker';
 import { useCart } from '../lib/cart';
-import { availableTypes, designPrice, displayColorId, moldColors, money, plateAllowsType, plateColors, plateFits, typeLabel, veinName } from '../lib/rules';
+import { availableTypes, designPrice, displayColorId, moldColors, money, plateAllowsType, plateColors, plateKindLabel, plateFits, typeLabel, veinName } from '../lib/rules';
 import type { Design, Plate, ProductType } from '../types';
 
 const SWIPE = 55; // unidades del escenario para cambiar de opción
@@ -172,7 +172,7 @@ export default function Customizer() {
 
   const plateSubtitle = plate
     ? fit.ok
-      ? `${plate.lengthCm} × ${plate.widthCm} cm · ${plate.kind === 'contenedor' ? 'contenedor' : 'plana'} · +${money(plate.price)}`
+      ? `${plate.lengthCm} × ${plate.widthCm} cm · ${plateKindLabel[plate.kind]} · +${money(plate.price)}`
       : fit.reason
     : 'Solo el producto';
 
@@ -269,7 +269,7 @@ export default function Customizer() {
         />
 
         <Picker
-          label="Placa de yeso"
+          label="Presentación"
           title={plate ? plate.name : 'Sin placa'}
           subtitle={plateSubtitle}
           warn={!fit.ok}

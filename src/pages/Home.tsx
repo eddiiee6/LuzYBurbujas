@@ -2,6 +2,7 @@ import { Link } from 'react-router-dom';
 import { useCatalog, useLookup } from '../data/CatalogContext';
 import { Stage } from '../components/Stage';
 import { MoldCard } from '../components/MoldCard';
+import { ArrangementCard } from './Arrangements';
 import { whatsappHello } from '../lib/cart';
 import { displayColorId } from '../lib/rules';
 
@@ -9,6 +10,8 @@ export default function Home() {
   const { catalog } = useCatalog();
   const look = useLookup();
   const molds = catalog.molds.filter((m) => m.active);
+  const activeArr = catalog.arrangements.filter((a) => a.active);
+  const arrangements = (activeArr.some((a) => a.featured) ? activeArr.filter((a) => a.featured) : activeArr).slice(0, 3);
   const featured = molds.filter((m) => m.featured).length ? molds.filter((m) => m.featured) : molds.slice(0, 3);
   const hero = molds[0];
   const heroPlate = catalog.plates.find((p) => p.active && p.kind === 'plana') ?? null;
@@ -88,6 +91,20 @@ export default function Home() {
           ))}
         </div>
       </section>
+
+      {arrangements.length > 0 && (
+        <section className="section container">
+          <div className="section-head">
+            <h2 className="section-title">Arreglos para regalar</h2>
+            <Link to="/arreglos">Ver todos →</Link>
+          </div>
+          <div className="grid-cards">
+            {arrangements.map((a) => (
+              <ArrangementCard key={a.id} a={a} />
+            ))}
+          </div>
+        </section>
+      )}
 
       <section className="section essences-band">
         <div className="container">

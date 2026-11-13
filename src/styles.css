@@ -1017,6 +1017,145 @@ textarea {
   }
 }
 
+/* ---------- Arreglos ---------- */
+.arr-card-photo {
+  aspect-ratio: 4 / 3;
+  display: grid;
+  place-items: center;
+  background: var(--pink-100);
+  font-size: 3rem;
+  overflow: hidden;
+}
+
+.arr-card-photo img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.arr-page {
+  display: grid;
+  grid-template-columns: minmax(0, 1.1fr) minmax(0, 1fr);
+  gap: 28px;
+  align-items: start;
+}
+
+@media (max-width: 860px) {
+  .arr-page {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+.arr-gallery {
+  display: grid;
+  gap: 10px;
+}
+
+.arr-main {
+  aspect-ratio: 1;
+  border-radius: 28px;
+  overflow: hidden;
+  border: 6px solid var(--white);
+  box-shadow: var(--shadow);
+  background: var(--pink-100);
+  display: grid;
+  place-items: center;
+  font-size: 4rem;
+}
+
+.arr-main img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.arr-thumbs {
+  display: flex;
+  gap: 8px;
+  overflow-x: auto;
+}
+
+.arr-thumbs .thumb img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  border-radius: 10px;
+}
+
+.arr-title {
+  font-size: 2rem;
+  margin: 0;
+}
+
+.arr-includes {
+  margin: 0;
+  padding-left: 20px;
+}
+
+.arr-input {
+  width: 100%;
+  padding: 10px 12px;
+  border: 2px solid var(--line);
+  border-radius: 12px;
+  background: var(--white);
+}
+
+.center-row {
+  justify-content: center;
+}
+
+.order-thumb img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.order-thumb-empty {
+  display: grid;
+  place-items: center;
+  width: 100%;
+  height: 100%;
+  font-size: 2rem;
+  background: var(--pink-100);
+}
+
+.aphotos {
+  display: grid;
+  gap: 10px;
+}
+
+.aphotos-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(110px, 1fr));
+  gap: 10px;
+}
+
+.aphotos-item {
+  position: relative;
+  margin: 0;
+  display: grid;
+  gap: 4px;
+}
+
+.aphotos-item img {
+  width: 100%;
+  aspect-ratio: 1;
+  object-fit: cover;
+  border-radius: 12px;
+}
+
+.aphotos-item .pill {
+  position: absolute;
+  top: 6px;
+  left: 6px;
+  font-size: 0.7rem;
+}
+
+.aphotos-actions {
+  display: flex;
+  justify-content: space-between;
+}
+
 /* ---------- Pedido ---------- */
 .order {
   display: grid;
@@ -1363,6 +1502,7 @@ textarea {
 
 .painter-area {
   overflow: auto;
+  min-height: 0;
   padding: 16px;
   background:
     repeating-conic-gradient(#f3eaee 0% 25%, #fff 0% 50%) 50% / 20px 20px;
@@ -1372,7 +1512,6 @@ textarea {
   position: relative;
   max-width: none;
   margin: 0 auto;
-  min-width: 100%;
 }
 
 .painter-sheet img,

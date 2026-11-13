@@ -22,7 +22,7 @@ export interface Repo {
   signOut(): Promise<void>;
 }
 
-const KINDS: EntityKind[] = ['collections', 'molds', 'plates', 'essences', 'colors'];
+const KINDS: EntityKind[] = ['collections', 'molds', 'plates', 'essences', 'colors', 'arrangements'];
 
 function sortByOrder<T>(list: T[]): T[] {
   return [...list].sort(
@@ -106,6 +106,7 @@ function supabaseRepo(sb: SupabaseClient): Repo {
       if (error) throw error;
       if (!data || data.length === 0) return structuredClone(seedCatalog);
       const c: Catalog = {
+        arrangements: [],
         collections: [],
         molds: [],
         plates: [],
@@ -192,6 +193,7 @@ export function normalize(c: Catalog): Catalog {
     plates: sortByOrder(c.plates),
     essences: sortByOrder(c.essences),
     colors: sortByOrder(c.colors),
+    arrangements: sortByOrder(c.arrangements ?? []),
   };
 }
 

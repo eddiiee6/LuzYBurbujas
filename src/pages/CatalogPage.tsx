@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { useCatalog } from '../data/CatalogContext';
 import { MoldCard } from '../components/MoldCard';
-import { availableTypes } from '../lib/rules';
+import { availableTypes, plateKindLabel, plateTypes, typeLabel } from '../lib/rules';
 import type { ProductType } from '../types';
 
 export default function CatalogPage() {
@@ -51,8 +51,8 @@ export default function CatalogPage() {
       )}
 
       <section className="section">
-        <h2 className="section-title">Placas de yeso</h2>
-        <p className="muted center">Dale un toque especial a tus velas y jabones. Cada placa es única: el marmoleado nunca sale igual.</p>
+        <h2 className="section-title">Presentaciones</h2>
+        <p className="muted center">Placas de yeso marmoleadas, contenedores y cajitas de regalo para tus velas y jabones.</p>
         <ul className="plate-list">
           {catalog.plates
             .filter((p) => p.active)
@@ -60,7 +60,7 @@ export default function CatalogPage() {
               <li key={p.id} className="card">
                 <b>{p.name}</b>
                 <span>
-                  {p.lengthCm} × {p.widthCm} cm · {p.kind === 'contenedor' ? 'contenedor (solo velas)' : 'plana'}
+                  {p.lengthCm} × {p.widthCm} cm · {plateKindLabel[p.kind]} · {plateTypes(p).map((t) => typeLabel[t].toLowerCase()).join(' y ')}
                 </span>
                 <span className="price-tag">+ ${p.price}</span>
               </li>

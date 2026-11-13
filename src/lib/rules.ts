@@ -8,8 +8,11 @@ export type FitResult = { ok: true } | { ok: false; reason: string };
 /** Para qué productos se ofrece una placa (velas: contenedores; jabones: planas). */
 export function plateTypes(plate: Plate): ProductType[] {
   if (plate.forTypes?.length) return plate.forTypes;
+  if (plate.kind === 'caja') return ['vela', 'jabon'];
   return plate.kind === 'contenedor' ? ['vela'] : ['jabon'];
 }
+
+export const plateKindLabel: Record<Plate['kind'], string> = { plana: 'placa', contenedor: 'contenedor', caja: 'cajita' };
 
 /** ¿Esta placa se ofrece para este tipo de producto? */
 export function plateAllowsType(plate: Plate, type: ProductType): boolean {
