@@ -1,7 +1,7 @@
 import { DEFAULT_MOLD_FIT, DEFAULT_PLATE_FIT, DEFAULT_WAX, type Catalog, type Collection, type ColorOption, type Essence, type Mold, type MoldArt, type Plate } from '../types';
 import { Stage } from '../components/Stage';
 import { useState } from 'react';
-import { moldColors, plateColors, plateFits } from '../lib/rules';
+import { moldColors, plateColors, plateFits, plateTypes } from '../lib/rules';
 import { Check, ColorInput, Field, Num, PhotoInput, Select, Slider, Text, slugify } from './fields';
 import { WaxPainter } from './WaxPainter';
 import { photoPlateBox } from '../art/plates';
@@ -74,7 +74,9 @@ export function MoldEditor({ item, set, catalog }: Ed<Mold>) {
   const [previewId, setPreviewId] = useState<string | null>(null);
   const preview = previewColors.find((c) => c.id === previewId) ?? previewColors.find((c) => c.id === (item.photoColorId ?? item.defaultColorId)) ?? previewColors[0];
   const color = catalog.colors.find((c) => c.id === item.defaultColorId)?.hex ?? '#f5a3c0';
-  const plate = catalog.plates.find((p) => p.active && p.kind === 'plana') ?? null;
+  // Vista previa en una placa que se ofrezca para ese tipo (vela → contenedor, jabón → plana).
+  const previewType = item.prices.vela != null ? 'vela' : 'jabon';
+  const plate = catalog.plates.find((p) => p.active && plateFits(item, p, previewType).ok) ?? null;
   const theme = catalog.collections.find((c) => c.id === item.collectionId)?.theme;
   return (
     <div className="editor-grid">
@@ -187,7 +189,7 @@ export function MoldEditor({ item, set, catalog }: Ed<Mold>) {
         <div className="editor-preview">
           <Stage
             mold={item}
-            type={item.prices.vela != null ? 'vela' : 'jabon'}
+            type={previewType}
             color={preview?.hex ?? color}
             colorId={preview?.id ?? item.defaultColorId}
             plate={plate}
@@ -244,10 +246,10 @@ export function PlateEditor({ item, set, catalog }: Ed<Plate>) {
               ]}
             />
           </Field>
-          <Field label="Tipo" hint="Contenedor = la cera va dentro (solo velas)">
+          <Field label="Tipo" hint="Contenedor = la cera va dentro">
             <Select
               value={item.kind}
-              onChange={(kind) => set({ kind })}
+              onChange={(kind) => set({ kind, forTypes: undefined })}
               options={[
                 { value: 'plana', label: 'Plana' },
                 { value: 'contenedor', label: 'Contenedor' },
@@ -255,6 +257,24 @@ export function PlateEditor({ item, set, catalog }: Ed<Plate>) {
             />
           </Field>
         </div>
+        <Field label="Se ofrece para" hint="Normalmente: contenedores para velas y placas planas para jabones.">
+          <div className="row2">
+            {(['vela', 'jabon'] as const).map((t) => {
+              const on = plateTypes(item).includes(t);
+              return (
+                <Check
+                  key={t}
+                  label={t === 'vela' ? 'Velas' : 'Jabones'}
+                  value={on}
+                  onChange={(v) => {
+                    const next = v ? [...plateTypes(item), t] : plateTypes(item).filter((x) => x !== t);
+                    if (next.length) set({ forTypes: Array.from(new Set(next)) });
+                  }}
+                />
+              );
+            })}
+          </div>
+        </Field>
         <div className="row3">
           <Field label="Largo (cm)">
             <Num value={item.lengthCm} onChange={(v) => set({ lengthCm: v ?? 8 })} />
@@ -413,7 +433,7 @@ export function PlateEditor({ item, set, catalog }: Ed<Plate>) {
           <div className="fit-list">
             {catalog.molds.map((m) => {
               const blocked = item.blockedMoldIds.includes(m.id);
-              const auto = plateFits(m, { ...item, blockedMoldIds: [] }, 'vela');
+              const auto = plateFits(m, { ...item, blockedMoldIds: [] }, plateTypes(item)[0]);
               return (
                 <label key={m.id} className="acheck">
                   <input
@@ -446,7 +466,7 @@ export function PlateEditor({ item, set, catalog }: Ed<Plate>) {
           {mold && (
             <Stage
               mold={mold}
-              type="vela"
+              type={plateTypes(item)[0]}
               color={color}
               colorId={mold.photoColorId ?? mold.defaultColorId}
               plate={item}
