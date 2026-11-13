@@ -5,10 +5,21 @@ const MARGIN_CM = 0.2;
 
 export type FitResult = { ok: true } | { ok: false; reason: string };
 
+/** Para qué productos se ofrece una placa (velas: contenedores; jabones: planas). */
+export function plateTypes(plate: Plate): ProductType[] {
+  if (plate.forTypes?.length) return plate.forTypes;
+  return plate.kind === 'contenedor' ? ['vela'] : ['jabon'];
+}
+
+/** ¿Esta placa se ofrece para este tipo de producto? */
+export function plateAllowsType(plate: Plate, type: ProductType): boolean {
+  return plateTypes(plate).includes(type);
+}
+
 /** ¿Este molde, en este tipo (jabón/vela), se puede poner en esta placa? */
 export function plateFits(mold: Mold, plate: Plate, type: ProductType): FitResult {
-  if (plate.kind === 'contenedor' && type !== 'vela')
-    return { ok: false, reason: 'Solo para velas (la cera va dentro)' };
+  if (!plateAllowsType(plate, type))
+    return { ok: false, reason: type === 'vela' ? 'Para velas solo hay contenedores' : 'Para jabones solo hay placas planas' };
   if (plate.blockedMoldIds.includes(mold.id)) return { ok: false, reason: 'No disponible para este molde' };
   const space = Math.min(plate.lengthCm, plate.widthCm);
   if (mold.baseWidthCm + MARGIN_CM > space)

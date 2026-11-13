@@ -4,7 +4,7 @@ import { useCatalog, useLookup } from '../data/CatalogContext';
 import { Stage, stageToPng } from '../components/Stage';
 import { Chips, Picker, Swatches } from '../components/Picker';
 import { useCart } from '../lib/cart';
-import { availableTypes, designPrice, displayColorId, moldColors, money, plateColors, plateFits, typeLabel, veinName } from '../lib/rules';
+import { availableTypes, designPrice, displayColorId, moldColors, money, plateAllowsType, plateColors, plateFits, typeLabel, veinName } from '../lib/rules';
 import type { Design, Plate, ProductType } from '../types';
 
 const SWIPE = 55; // unidades del escenario para cambiar de opción
@@ -32,8 +32,10 @@ export default function Customizer() {
     moldColorList.find((c) => c.id === startColorId) ??
     moldColorList[0];
   const plateParam = params.get('placa');
+  // Solo las placas que se ofrecen para este tipo: velas → contenedores, jabones → planas.
+  const typePlates = plates.filter((p) => plateAllowsType(p, type));
   const plate: Plate | null =
-    plateParam === 'ninguna' ? null : (plates.find((p) => p.id === plateParam) ?? plates[0] ?? null);
+    plateParam === 'ninguna' ? null : (typePlates.find((p) => p.id === plateParam) ?? typePlates[0] ?? null);
   // Con foto real de la placa, las vetas son las de la foto: no se eligen.
   const vein = plate && !plate.photo
     ? (plate.veinColors.find((v) => v.replace('#', '') === params.get('veta')) ?? plate.veinColors[0] ?? null)
@@ -76,7 +78,7 @@ export default function Customizer() {
     setAdded(false);
   };
 
-  const plateOptions = useMemo(() => [null, ...plates], [plates]);
+  const plateOptions = useMemo(() => [null, ...plates.filter((p) => plateAllowsType(p, type))], [plates, type]);
   const fit = mold && plate ? plateFits(mold, plate, type) : ({ ok: true } as const);
 
   if (!mold || !color) {

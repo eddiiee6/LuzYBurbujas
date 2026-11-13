@@ -116,6 +116,11 @@ export interface Plate {
   photoLuma?: number;
   /** Colores que se ofrecen para la placa con foto. Vacío o sin definir = todos. */
   photoColorIds?: string[];
+  /**
+   * Para qué tipo de producto se ofrece. Sin definir: los contenedores solo
+   * para velas y las placas planas solo para jabones.
+   */
+  forTypes?: ProductType[];
   /** Moldes que no caben aunque las medidas digan que sí. */
   blockedMoldIds: string[];
   active: boolean;
