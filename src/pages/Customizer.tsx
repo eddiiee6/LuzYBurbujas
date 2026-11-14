@@ -3,6 +3,7 @@ import { Link, useSearchParams } from 'react-router-dom';
 import { useCatalog, useLookup } from '../data/CatalogContext';
 import { Stage, stageToPng } from '../components/Stage';
 import { photosFor } from '../lib/gallery';
+import { FitPhoto } from '../components/FitPhoto';
 import { Chips, Picker, Swatches } from '../components/Picker';
 import { useCart } from '../lib/cart';
 import { availableTypes, designPrice, displayColorId, moldColors, money, plateAllowsType, plateColors, plateKindLabel, plateFits, typeLabel, veinName } from '../lib/rules';
@@ -201,12 +202,11 @@ export default function Customizer() {
         >
           {realPhoto ? (
             <div className="real-photo">
-              <img
+              <FitPhoto
                 key={realPhoto.url}
                 className="anim-fade"
                 src={realPhoto.url}
                 alt={`${mold.name}${plate ? ` en ${plate.name.toLowerCase()}` : ''}`}
-                draggable={false}
                 style={drag ? { transform: `translateX(${(drag.dx * 100) / 400}%)` } : undefined}
               />
               <span className="real-badge">📷 Foto real</span>

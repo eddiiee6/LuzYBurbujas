@@ -4,6 +4,7 @@ import { availableTypes, displayColorId, money, typeLabel } from '../lib/rules';
 import type { Mold } from '../types';
 import { Stage } from './Stage';
 import { coverPhoto } from '../lib/gallery';
+import { FitPhoto } from './FitPhoto';
 
 export function MoldCard({ mold }: { mold: Mold }) {
   const look = useLookup();
@@ -15,7 +16,7 @@ export function MoldCard({ mold }: { mold: Mold }) {
     <Link to={`/personaliza?molde=${mold.slug}`} className="mold-card" style={{ ['--card-bg' as string]: theme?.bg ?? '#fde8f0' }}>
       <div className="mold-card-art">
         {coverPhoto(mold) ? (
-          <img className="card-photo" src={coverPhoto(mold)!.url} alt={mold.name} loading="lazy" />
+          <FitPhoto className="card-photo" src={coverPhoto(mold)!.url} alt={mold.name} />
         ) : (
           <Stage bare mold={mold} type={types.includes('vela') ? 'vela' : 'jabon'} color={color} colorId={colorId} plate={null} veinColor={null} />
         )}

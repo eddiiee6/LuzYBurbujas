@@ -4,6 +4,7 @@ import { useCatalog, useLookup } from '../data/CatalogContext';
 import { availableTypes, displayColorId, money, plateFits, typeLabel } from '../lib/rules';
 import type { GalleryPhoto, Mold, Plate, ProductType } from '../types';
 import { Stage } from './Stage';
+import { FitPhoto } from './FitPhoto';
 
 interface Slide {
   mold: Mold;
@@ -73,7 +74,7 @@ export function HeroShowcase() {
     <div className="hero-showcase" onMouseEnter={() => setPaused(true)} onMouseLeave={() => setPaused(false)}>
       <Link to={`/personaliza?${params}`} className="hero-art" aria-label={`Personalizar ${mold.name}`}>
         {slide.photo ? (
-          <img key={slide.photo.url} className="hero-photo anim-fade" src={slide.photo.url} alt={mold.name} />
+          <FitPhoto key={slide.photo.url} className="anim-fade" src={slide.photo.url} alt={mold.name} />
         ) : (
           <Stage
             mold={mold}
@@ -88,14 +89,14 @@ export function HeroShowcase() {
             lit
           />
         )}
-        <span className="hero-caption">
-          <b>{mold.name}</b>
-          <span>
-            {typeLabel[type]} {money(mold.prices[type] ?? 0)}
-            {plate ? ` · ${plate.name.toLowerCase()}` : ''}
-          </span>
-          <em>Personalizar →</em>
+      </Link>
+      <Link to={`/personaliza?${params}`} className="hero-caption">
+        <b>{mold.name}</b>
+        <span>
+          {typeLabel[type]} {money(mold.prices[type] ?? 0)}
+          {plate ? ` · ${plate.name.toLowerCase()}` : ''}
         </span>
+        <em>Personalizar →</em>
       </Link>
       {slides.length > 1 && (
         <div className="hero-dots" role="tablist" aria-label="Productos">
