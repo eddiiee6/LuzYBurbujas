@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useCatalog, useLookup } from '../data/CatalogContext';
 import { Stage } from '../components/Stage';
+import { photosFor } from '../lib/gallery';
 import { describeItem, isDesign, itemExists, itemPrice, useCart, whatsappLink, type Customer } from '../lib/cart';
 import { money } from '../lib/rules';
 
@@ -90,16 +91,20 @@ export default function Order() {
           return (
             <li key={it.id} className="order-item card">
               <Link to={`/personaliza?${params}`} className="order-thumb" aria-label="Editar diseño">
+                {photosFor(mold, it.plateId, it.type, it.colorId)[0] ? (
+                  <img src={photosFor(mold, it.plateId, it.type, it.colorId)[0].url} alt="" />
+                ) : (
                 <Stage
-                  mold={mold}
-                  type={it.type}
-                  color={look.color.get(it.colorId)?.hex ?? '#fff'}
-                  colorId={it.colorId}
-                  plate={plate}
-                  veinColor={it.veinColor}
-                  plateColor={it.plateColorId ? look.color.get(it.plateColorId)?.hex : null}
-                  theme={look.collection.get(mold.collectionId)?.theme}
-                />
+                    mold={mold}
+                    type={it.type}
+                    color={look.color.get(it.colorId)?.hex ?? '#fff'}
+                    colorId={it.colorId}
+                    plate={plate}
+                    veinColor={it.veinColor}
+                    plateColor={it.plateColorId ? look.color.get(it.plateColorId)?.hex : null}
+                    theme={look.collection.get(mold.collectionId)?.theme}
+                  />
+                )}
               </Link>
               <div className="order-info">
                 <b>{first}</b>
