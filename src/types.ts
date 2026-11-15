@@ -167,6 +167,16 @@ export interface Settings {
   whatsapp: string;
   instagram?: string;
   facebook?: string;
+  /** Mayoreo en arreglos: a partir de esta cantidad… */
+  wholesaleMinQty?: number;
+  /** …se descuenta esto a cada pieza (pesos). */
+  wholesaleDiscount?: number;
+}
+
+/** Una pieza elegida para un arreglo. moldId null = "a elección de Lulú". */
+export interface ArrangementPiece {
+  moldId: string | null;
+  type: ProductType | null;
 }
 
 /** Arreglo ya armado (cesta con varias piezas, flores secas, musgo…). */
@@ -183,6 +193,10 @@ export interface Arrangement {
   photos: string[];
   /** El cliente puede pedir otros colores (se le pide escribirlos). */
   customColors: boolean;
+  /** Cuántas piezas elige el cliente (0 = arreglo fijo, no se eligen piezas). */
+  pieces?: number;
+  /** Piezas sugeridas (arreglos listos); el cliente las puede cambiar. */
+  defaultPieces?: ArrangementPiece[];
   active: boolean;
   featured?: boolean;
   order: number;
@@ -229,6 +243,8 @@ export interface ArrangementItem {
   /** Colores que pidió el cliente (texto libre). Vacío = como en la foto. */
   colors: string;
   essenceId: string | null;
+  /** Piezas elegidas (si el arreglo deja elegirlas). */
+  pieces?: ArrangementPiece[];
 }
 
 export type CartItem = DesignItem | ArrangementItem;

@@ -299,6 +299,24 @@ function SettingsForm({ settings, onSaved }: { settings: Settings; onSaved: () =
         <Field label="Instagram (enlace)">
           <Text value={s.instagram ?? ''} onChange={(instagram) => setS({ ...s, instagram })} placeholder="https://instagram.com/…" />
         </Field>
+        <div className="row2">
+          <Field label="Mayoreo: desde (arreglos iguales)" hint="0 = sin mayoreo">
+            <input
+              type="number"
+              min={0}
+              value={s.wholesaleMinQty ?? 0}
+              onChange={(e) => setS({ ...s, wholesaleMinQty: Math.max(0, Number(e.target.value) || 0) })}
+            />
+          </Field>
+          <Field label="Descuento por arreglo ($)">
+            <input
+              type="number"
+              min={0}
+              value={s.wholesaleDiscount ?? 0}
+              onChange={(e) => setS({ ...s, wholesaleDiscount: Math.max(0, Number(e.target.value) || 0) })}
+            />
+          </Field>
+        </div>
         <Field label="Facebook (enlace)">
           <Text value={s.facebook ?? ''} onChange={(facebook) => setS({ ...s, facebook })} placeholder="https://facebook.com/…" />
         </Field>
