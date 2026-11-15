@@ -4,13 +4,14 @@ import { useCatalog } from '../data/CatalogContext';
 import { friendlyError, parseBackup, repo, uploadEmbeddedPhotos } from '../data/repo';
 import { seedCatalog } from '../data/seed';
 import type { Catalog, EntityKind, Settings } from '../types';
-import { CollectionEditor, ColorEditor, EssenceEditor, MoldEditor, PlateEditor } from './editors';
+import { CollectionEditor, ColorEditor, EssenceEditor, MoldEditor, PlateEditor, ArrangementEditor } from './editors';
 import { Field, Text } from './fields';
 
 type Tab = EntityKind | 'settings' | 'backup';
 
 const TABS: { id: Tab; label: string }[] = [
   { id: 'molds', label: 'Moldes' },
+  { id: 'arrangements', label: 'Arreglos' },
   { id: 'plates', label: 'Placas' },
   { id: 'colors', label: 'Colores' },
   { id: 'essences', label: 'Esencias' },
@@ -25,6 +26,19 @@ const uid = () => Math.random().toString(36).slice(2, 8);
 function blank(kind: EntityKind, c: Catalog): Catalog[EntityKind][number] {
   const order = (c[kind] as { order?: number }[]).reduce((m, x) => Math.max(m, x.order ?? 0), 0) + 1;
   switch (kind) {
+    case 'arrangements':
+      return {
+        id: `arreglo-${uid()}`,
+        slug: '',
+        name: 'Nuevo arreglo',
+        description: '',
+        includes: [],
+        price: 0,
+        photos: [],
+        customColors: true,
+        active: false,
+        order,
+      };
     case 'molds':
       return {
         id: `molde-${uid()}`,
@@ -204,6 +218,8 @@ function ListEditor({ kind, catalog, onSaved }: { kind: EntityKind; catalog: Cat
         <ColorEditor {...props} />
       ) : kind === 'essences' ? (
         <EssenceEditor {...props} />
+      ) : kind === 'arrangements' ? (
+        <ArrangementEditor {...props} />
       ) : (
         <CollectionEditor {...props} />
       );

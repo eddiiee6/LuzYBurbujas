@@ -1,9 +1,10 @@
-import { DEFAULT_MOLD_FIT, DEFAULT_PLATE_FIT, DEFAULT_WAX, type Catalog, type Collection, type ColorOption, type Essence, type Mold, type MoldArt, type Plate } from '../types';
+import { DEFAULT_MOLD_FIT, DEFAULT_PLATE_FIT, DEFAULT_WAX, type Arrangement, type Catalog, type Collection, type ColorOption, type Essence, type GalleryPhoto, type Mold, type MoldArt, type Plate } from '../types';
 import { Stage } from '../components/Stage';
 import { useState } from 'react';
-import { moldColors, plateColors, plateFits } from '../lib/rules';
-import { Check, ColorInput, Field, Num, PhotoInput, Select, Slider, Text, slugify } from './fields';
+import { moldColors, plateColors, plateFits, plateTypes } from '../lib/rules';
+import { Check, ColorInput, Field, Num, PhotoInput, PhotoList, Select, Slider, Text, slugify } from './fields';
 import { WaxPainter } from './WaxPainter';
+import { prepareCutout } from '../lib/image';
 import { photoPlateBox } from '../art/plates';
 import { friendlyError, repo } from '../data/repo';
 
@@ -74,7 +75,9 @@ export function MoldEditor({ item, set, catalog }: Ed<Mold>) {
   const [previewId, setPreviewId] = useState<string | null>(null);
   const preview = previewColors.find((c) => c.id === previewId) ?? previewColors.find((c) => c.id === (item.photoColorId ?? item.defaultColorId)) ?? previewColors[0];
   const color = catalog.colors.find((c) => c.id === item.defaultColorId)?.hex ?? '#f5a3c0';
-  const plate = catalog.plates.find((p) => p.active && p.kind === 'plana') ?? null;
+  // Vista previa en una placa que se ofrezca para ese tipo (vela → contenedor, jabón → plana).
+  const previewType = item.prices.vela != null ? 'vela' : 'jabon';
+  const plate = catalog.plates.find((p) => p.active && plateFits(item, p, previewType).ok) ?? null;
   const theme = catalog.collections.find((c) => c.id === item.collectionId)?.theme;
   return (
     <div className="editor-grid">
@@ -116,7 +119,15 @@ export function MoldEditor({ item, set, catalog }: Ed<Mold>) {
             <Num step={1} value={item.prices.vela} onChange={(v) => set({ prices: { ...item.prices, vela: v } })} />
           </Field>
         </div>
-        <Field label="Foto sin fondo" hint="PNG o WebP transparente, tomada de frente y un poco desde arriba.">
+        <fieldset className="afit">
+          <legend>📷 Fotos reales (galería)</legend>
+          <small>
+            Las mismas de Instagram. En cada una indica la presentación (sola, placa, cesta, cajita). Si el cliente elige una combinación que
+            tiene foto, se ve la foto tal cual; si no, se usa el montaje.
+          </small>
+          <GalleryEditor mold={item} catalog={catalog} onChange={(gallery) => set({ gallery })} />
+        </fieldset>
+        <Field label="Foto sin fondo (para el montaje)" hint="PNG o WebP transparente, tomada de frente y un poco desde arriba.">
           <PhotoInput value={item.photo} name={item.slug} onChange={(photo, photoAspect, photoLuma) => set({ photo, photoAspect, photoLuma })} />
         </Field>
         {item.photo && (
@@ -187,7 +198,7 @@ export function MoldEditor({ item, set, catalog }: Ed<Mold>) {
         <div className="editor-preview">
           <Stage
             mold={item}
-            type={item.prices.vela != null ? 'vela' : 'jabon'}
+            type={previewType}
             color={preview?.hex ?? color}
             colorId={preview?.id ?? item.defaultColorId}
             plate={plate}
@@ -207,6 +218,7 @@ export function PlateEditor({ item, set, catalog }: Ed<Plate>) {
   const setFit = (patch: Partial<typeof fit>) => set({ photoFit: { ...fit, ...patch } });
   const wax = { ...DEFAULT_WAX, ...item.photoFit };
   const [painting, setPainting] = useState(false);
+  const [paintingFront, setPaintingFront] = useState(false);
   const [paintMsg, setPaintMsg] = useState<string | null>(null);
   // Óvalo de los controles, en fracciones de la foto, para "Empezar con óvalo".
   const box = photoPlateBox(item);
@@ -244,17 +256,36 @@ export function PlateEditor({ item, set, catalog }: Ed<Plate>) {
               ]}
             />
           </Field>
-          <Field label="Tipo" hint="Contenedor = la cera va dentro (solo velas)">
+          <Field label="Tipo" hint="Contenedor = la cera va dentro">
             <Select
               value={item.kind}
-              onChange={(kind) => set({ kind })}
+              onChange={(kind) => set({ kind, forTypes: undefined })}
               options={[
                 { value: 'plana', label: 'Plana' },
                 { value: 'contenedor', label: 'Contenedor' },
+                { value: 'caja', label: 'Cajita de regalo' },
               ]}
             />
           </Field>
         </div>
+        <Field label="Se ofrece para" hint="Normalmente: contenedores para velas y placas planas para jabones.">
+          <div className="row2">
+            {(['vela', 'jabon'] as const).map((t) => {
+              const on = plateTypes(item).includes(t);
+              return (
+                <Check
+                  key={t}
+                  label={t === 'vela' ? 'Velas' : 'Jabones'}
+                  value={on}
+                  onChange={(v) => {
+                    const next = v ? [...plateTypes(item), t] : plateTypes(item).filter((x) => x !== t);
+                    if (next.length) set({ forTypes: Array.from(new Set(next)) });
+                  }}
+                />
+              );
+            })}
+          </div>
+        </Field>
         <div className="row3">
           <Field label="Largo (cm)">
             <Num value={item.lengthCm} onChange={(v) => set({ lengthCm: v ?? 8 })} />
@@ -391,6 +422,39 @@ export function PlateEditor({ item, set, catalog }: Ed<Plate>) {
             )}
           </fieldset>
         )}
+        {item.photo && item.kind === 'caja' && (
+          <fieldset className="afit">
+            <legend>Lo que va delante del producto</legend>
+            <small>
+              Pinta el acetato del frente, el moño y el relleno de enfrente. Eso se dibuja encima de la vela o el jabón para que se vea dentro de
+              la cajita. Usa la foto de la cajita vacía.
+            </small>
+            <div className="paint-row">
+              {fit.frontMask ? <img className="paint-thumb" src={fit.frontMask} alt="Zona del frente pintada" /> : <span className="muted">Todavía no pintas el frente.</span>}
+              <button type="button" className="btn primary small" onClick={() => setPaintingFront(true)}>
+                {fit.frontMask ? '🖌️ Editar el frente' : '🖌️ Pintar el frente'}
+              </button>
+            </div>
+          </fieldset>
+        )}
+        {paintingFront && item.photo && (
+          <WaxPainter
+            photo={item.photo}
+            mask={fit.frontMask}
+            title="Pinta lo que va delante del producto"
+            hint="Lo rosa queda por encima de la vela o el jabón."
+            onCancel={() => setPaintingFront(false)}
+            onDone={async ({ blob }) => {
+              try {
+                const frontMask = await repo.uploadImage(blob, `frente-${item.id}`);
+                setFit({ frontMask });
+                setPaintingFront(false);
+              } catch (e) {
+                throw new Error(friendlyError(e));
+              }
+            }}
+          />
+        )}
         {painting && item.photo && (
           <WaxPainter
             photo={item.photo}
@@ -413,7 +477,7 @@ export function PlateEditor({ item, set, catalog }: Ed<Plate>) {
           <div className="fit-list">
             {catalog.molds.map((m) => {
               const blocked = item.blockedMoldIds.includes(m.id);
-              const auto = plateFits(m, { ...item, blockedMoldIds: [] }, 'vela');
+              const auto = plateFits(m, { ...item, blockedMoldIds: [] }, plateTypes(item)[0]);
               return (
                 <label key={m.id} className="acheck">
                   <input
@@ -446,7 +510,7 @@ export function PlateEditor({ item, set, catalog }: Ed<Plate>) {
           {mold && (
             <Stage
               mold={mold}
-              type="vela"
+              type={plateTypes(item)[0]}
               color={color}
               colorId={mold.photoColorId ?? mold.defaultColorId}
               plate={item}
@@ -529,6 +593,132 @@ export function CollectionEditor({ item, set }: Ed<Collection>) {
           <ColorInput value={item.theme.accent} onChange={(accent) => set({ theme: { ...item.theme, accent } })} />
         </Field>
       </div>
+    </div>
+  );
+}
+
+export function ArrangementEditor({ item, set }: Ed<Arrangement>) {
+  return (
+    <div className="editor-fields">
+      <Field label="Nombre">
+        <Text value={item.name} onChange={(name) => set({ name, slug: item.slug || slugify(name) })} />
+      </Field>
+      <Field label="Dirección web" hint={`/arreglos/${item.slug}`}>
+        <Text value={item.slug} onChange={(v) => set({ slug: slugify(v) })} />
+      </Field>
+      <Field label="Descripción">
+        <textarea rows={3} value={item.description} onChange={(e) => set({ description: e.target.value })} />
+      </Field>
+      <Field label="Qué incluye" hint="Una pieza por renglón. Ej. Vela tulipán, Jabón mariposa, Flores secas, Musgo, Cesta.">
+        <textarea
+          rows={5}
+          value={item.includes.join('\n')}
+          onChange={(e) => set({ includes: e.target.value.split('\n') })}
+          onBlur={(e) => set({ includes: e.target.value.split('\n').map((l) => l.trim()).filter(Boolean) })}
+        />
+      </Field>
+      <Field label="Precio">
+        <Num step={1} value={item.price} onChange={(v) => set({ price: v ?? 0 })} />
+      </Field>
+      <Field label="Fotos" hint="Fotos reales del arreglo, con fondo. La primera es la principal.">
+        <PhotoList value={item.photos} name={item.slug || item.id} onChange={(photos) => set({ photos })} />
+      </Field>
+      <Check label="El cliente puede pedirlo en otros colores" value={item.customColors} onChange={(customColors) => set({ customColors })} />
+      <div className="row2">
+        <Check label="Visible en el sitio" value={item.active} onChange={(active) => set({ active })} />
+        <Check label="Destacado en inicio" value={!!item.featured} onChange={(featured) => set({ featured })} />
+      </div>
+      <Field label="Orden">
+        <Num step={1} value={item.order} onChange={(v) => set({ order: v ?? 0 })} />
+      </Field>
+    </div>
+  );
+}
+
+/** Galería de fotos reales de un molde, cada una etiquetada con su presentación. */
+function GalleryEditor({ mold, catalog, onChange }: { mold: Mold; catalog: Catalog; onChange: (g: GalleryPhoto[]) => void }) {
+  const gallery = mold.gallery ?? [];
+  const [busy, setBusy] = useState(false);
+  const [err, setErr] = useState<string | null>(null);
+  const update = (i: number, patch: Partial<GalleryPhoto>) => onChange(gallery.map((g, j) => (j === i ? { ...g, ...patch } : g)));
+  const move = (i: number, d: -1 | 1) => {
+    const j = i + d;
+    if (j < 0 || j >= gallery.length) return;
+    const next = [...gallery];
+    [next[i], next[j]] = [next[j], next[i]];
+    onChange(next);
+  };
+  const plates = catalog.plates;
+  return (
+    <div className="gallery-editor">
+      {gallery.map((g, i) => (
+        <div key={g.id} className="gallery-row">
+          <img src={g.url} alt="" />
+          <div className="gallery-tags">
+            <Select
+              value={g.plateId ?? ''}
+              onChange={(v) => update(i, { plateId: v || null })}
+              options={[{ value: '', label: 'Sola (sin placa)' }, ...plates.map((p) => ({ value: p.id, label: p.name }))]}
+            />
+            <Select
+              value={g.type ?? ''}
+              onChange={(v) => update(i, { type: (v || null) as GalleryPhoto['type'] })}
+              options={[
+                { value: '', label: 'Vela y jabón' },
+                { value: 'vela', label: 'Vela' },
+                { value: 'jabon', label: 'Jabón' },
+              ]}
+            />
+            <Select
+              value={g.colorId ?? ''}
+              onChange={(v) => update(i, { colorId: v || null })}
+              options={[{ value: '', label: 'Color: no indicar' }, ...catalog.colors.map((c) => ({ value: c.id, label: `Color: ${c.name}` }))]}
+            />
+            <div className="aphotos-actions">
+              <button type="button" className="link-btn" onClick={() => move(i, -1)} disabled={i === 0} aria-label="Mover antes">
+                ↑
+              </button>
+              <button type="button" className="link-btn" onClick={() => onChange(gallery.filter((_, j) => j !== i))}>
+                Quitar
+              </button>
+              <button type="button" className="link-btn" onClick={() => move(i, 1)} disabled={i === gallery.length - 1} aria-label="Mover después">
+                ↓
+              </button>
+            </div>
+            {i === 0 && <small className="muted">Portada del molde en el catálogo</small>}
+          </div>
+        </div>
+      ))}
+      <label className="btn ghost small">
+        {busy ? 'Subiendo…' : '+ Agregar fotos reales'}
+        <input
+          type="file"
+          accept="image/png,image/webp,image/jpeg"
+          multiple
+          hidden
+          onChange={async (e) => {
+            const files = Array.from(e.target.files ?? []);
+            if (!files.length) return;
+            setBusy(true);
+            setErr(null);
+            try {
+              const added: GalleryPhoto[] = [];
+              for (const f of files) {
+                const { blob } = await prepareCutout(f, 1200);
+                const url = await repo.uploadImage(blob, `${mold.slug || mold.id}-foto`);
+                added.push({ id: Math.random().toString(36).slice(2, 10), url, plateId: null, type: null, colorId: null });
+              }
+              onChange([...gallery, ...added]);
+            } catch (x) {
+              setErr(friendlyError(x));
+            } finally {
+              setBusy(false);
+              e.target.value = '';
+            }
+          }}
+        />
+      </label>
+      {err && <small className="warn">{err}</small>}
     </div>
   );
 }

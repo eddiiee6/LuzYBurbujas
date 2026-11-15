@@ -44,9 +44,23 @@ export interface Mold {
   photoLuma?: number;
   /** Colores que se ofrecen para este molde. Vacío o sin definir = todos. */
   allowedColorIds?: string[];
+  /** Fotos reales por presentación. Si hay una para la combinación elegida, se muestra en lugar del montaje. */
+  gallery?: GalleryPhoto[];
   active: boolean;
   featured?: boolean;
   order: number;
+}
+
+/** Foto real del producto (p. ej. la misma del carrusel de Instagram), etiquetada. */
+export interface GalleryPhoto {
+  id: string;
+  url: string;
+  /** Presentación en la foto (id de placa/cesta/cajita). null = el producto solo. */
+  plateId: string | null;
+  /** Si es vela o jabón. null = sirve para los dos. */
+  type?: ProductType | null;
+  /** Color del producto en la foto (id de Color). Solo informativo. */
+  colorId?: string | null;
 }
 
 export interface MoldPhotoFit {
@@ -79,6 +93,8 @@ export interface PlatePhotoFit {
   waxMode?: 'ovalo' | 'pintado';
   /** Máscara pintada (PNG blanco sobre transparente, mismo encuadre que la foto). */
   waxMask?: string;
+  /** Cajitas: máscara pintada de lo que va DELANTE del producto (acetato, moño, relleno). */
+  frontMask?: string;
   /** Caja de lo pintado, en fracciones de la foto (0..1), para el brillo de la cera. */
   waxBox?: { x: number; y: number; w: number; h: number };
 }
@@ -89,8 +105,8 @@ export const DEFAULT_MOLD_FIT: MoldPhotoFit = { scale: 1, offsetY: 0 };
 export const DEFAULT_PLATE_FIT: PlatePhotoFit = { scale: 1, seatY: 0, rotate: 0, squash: 1 };
 
 export type PlateShape = 'ovalada' | 'redonda' | 'rectangular' | 'cesta';
-/** plana: el producto se apoya encima. contenedor: la cera va dentro (solo velas). */
-export type PlateKind = 'plana' | 'contenedor';
+/** plana: el producto se apoya encima. contenedor: la cera va dentro. caja: cajita de presentación. */
+export type PlateKind = 'plana' | 'contenedor' | 'caja';
 
 export interface Plate {
   id: string;
@@ -116,6 +132,11 @@ export interface Plate {
   photoLuma?: number;
   /** Colores que se ofrecen para la placa con foto. Vacío o sin definir = todos. */
   photoColorIds?: string[];
+  /**
+   * Para qué tipo de producto se ofrece. Sin definir: los contenedores solo
+   * para velas y las placas planas solo para jabones.
+   */
+  forTypes?: ProductType[];
   /** Moldes que no caben aunque las medidas digan que sí. */
   blockedMoldIds: string[];
   active: boolean;
@@ -148,7 +169,27 @@ export interface Settings {
   facebook?: string;
 }
 
+/** Arreglo ya armado (cesta con varias piezas, flores secas, musgo…). */
+export interface Arrangement {
+  id: string;
+  /** Se usa en la URL: /arreglos/cesta-primavera */
+  slug: string;
+  name: string;
+  description: string;
+  /** Qué incluye, una pieza por renglón. */
+  includes: string[];
+  price: number;
+  /** Fotos reales (con fondo), la primera es la principal. */
+  photos: string[];
+  /** El cliente puede pedir otros colores (se le pide escribirlos). */
+  customColors: boolean;
+  active: boolean;
+  featured?: boolean;
+  order: number;
+}
+
 export interface Catalog {
+  arrangements: Arrangement[];
   collections: Collection[];
   molds: Mold[];
   plates: Plate[];
@@ -158,7 +199,7 @@ export interface Catalog {
 }
 
 /** Entidades que se editan como listas en el panel. */
-export type EntityKind = 'collections' | 'molds' | 'plates' | 'essences' | 'colors';
+export type EntityKind = 'collections' | 'molds' | 'plates' | 'essences' | 'colors' | 'arrangements';
 
 /** Lo que el cliente arma en el personalizador. */
 export interface Design {
@@ -172,7 +213,22 @@ export interface Design {
   essenceId: string | null;
 }
 
-export interface CartItem extends Design {
+/** Vela o jabón armado en el personalizador. */
+export interface DesignItem extends Design {
+  kind?: 'diseño';
   id: string;
   qty: number;
 }
+
+/** Arreglo del catálogo de arreglos. */
+export interface ArrangementItem {
+  kind: 'arreglo';
+  id: string;
+  qty: number;
+  arrangementId: string;
+  /** Colores que pidió el cliente (texto libre). Vacío = como en la foto. */
+  colors: string;
+  essenceId: string | null;
+}
+
+export type CartItem = DesignItem | ArrangementItem;

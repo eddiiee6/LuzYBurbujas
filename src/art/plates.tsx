@@ -245,6 +245,27 @@ function photoPlate(plate: Plate, uid: string, tint?: string | null, wax?: strin
   return {
     seatY: fit.seatY,
     productScale: plate.kind === 'contenedor' ? 0.85 : 1,
+    // Cajitas: lo pintado como "delante" (acetato, moño, relleno) se vuelve a
+    // dibujar encima del producto para que quede DENTRO de la caja.
+    front:
+      plate.kind === 'caja' ? (
+        <g transform={`rotate(${fit.rotate})`}>
+          <defs>
+            <mask id={`${uid}-fm`} maskUnits="userSpaceOnUse" x={-w / 2} y={-h / 2} width={w} height={h}>
+              {fit.frontMask ? (
+                <image href={fit.frontMask} x={-w / 2} y={-h / 2} width={w} height={h} preserveAspectRatio="none" />
+              ) : (
+                <rect x={-w / 2} y={-h / 2} width={w} height={h} fill="#000" />
+              )}
+            </mask>
+          </defs>
+          {/* reflejo del acetato sobre el producto */}
+          <image href={plate.photo} x={-w / 2} y={-h / 2} width={w} height={h} preserveAspectRatio="none" opacity={0.14} />
+          {fit.frontMask && (
+            <image href={plate.photo} x={-w / 2} y={-h / 2} width={w} height={h} preserveAspectRatio="none" mask={`url(#${uid}-fm)`} />
+          )}
+        </g>
+      ) : undefined,
     back: (
       <g transform={`rotate(${fit.rotate})`}>
         {recolor && <ColorizeFilter id={`${uid}-tint`} hex={tint!} luma={plate.photoLuma} />}
@@ -272,8 +293,65 @@ function photoPlate(plate: Plate, uid: string, tint?: string | null, wax?: strin
   };
 }
 
+/** Cajita de acetato dibujada (mientras no hay foto): panel trasero, relleno, panel frontal y moño. */
+function giftBox(plate: Plate, uid: string): PlateRender {
+  const W = plate.lengthCm * PX_PER_CM;
+  const H = plate.heightCm * PX_PER_CM * 0.87;
+  const d = W * 0.22; // profundidad aparente
+  const fill = (y: number, n: number, key: string) =>
+    Array.from({ length: n }, (_, i) => (
+      <circle key={`${key}${i}`} cx={-W / 2 + 6 + ((W - 12) * i) / (n - 1)} cy={y + ((i * 7) % 5)} r={7 + ((i * 3) % 4)} fill={i % 3 ? '#f1e3cc' : '#e8d3b1'} />
+    ));
+  return {
+    seatY: 0,
+    productScale: 1,
+    back: (
+      <g>
+        <ellipse cx={6} cy={d * 0.6 + 6} rx={W / 2 + 14} ry={d * 0.7} fill="#5b3a2e" opacity={0.16} filter="url(#shadow-blur)" />
+        {/* panel trasero y piso */}
+        <rect x={-W / 2 + d * 0.35} y={-H - d * 0.6} width={W - d * 0.7} height={H} fill="#ffffff" opacity={0.18} stroke="#ffffff" strokeOpacity={0.6} />
+        <polygon points={`${-W / 2},${d * 0.5} ${W / 2},${d * 0.5} ${W / 2 - d * 0.35},${-d * 0.6} ${-W / 2 + d * 0.35},${-d * 0.6}`} fill="#efe3d3" opacity={0.7} />
+        {fill(-d * 0.2, 9, 'b')}
+      </g>
+    ),
+    front: (
+      <g>
+        <defs>
+          <linearGradient id={`${uid}-ac`} x1="0" x2="1">
+            <stop offset="0" stopColor="#ffffff" stopOpacity="0.35" />
+            <stop offset="0.25" stopColor="#ffffff" stopOpacity="0.06" />
+            <stop offset="0.8" stopColor="#ffffff" stopOpacity="0.1" />
+            <stop offset="1" stopColor="#ffffff" stopOpacity="0.4" />
+          </linearGradient>
+        </defs>
+        {fill(d * 0.35, 8, 'f')}
+        {/* panel frontal de acetato */}
+        <rect x={-W / 2} y={-H + d * 0.5} width={W} height={H} fill={`url(#${uid}-ac)`} stroke="#ffffff" strokeWidth={1.5} strokeOpacity={0.9} />
+        <line x1={-W / 2 + 10} y1={-H + d * 0.5 + 6} x2={-W / 2 + 10} y2={d * 0.5 - 6} stroke="#ffffff" strokeWidth={3} opacity={0.6} />
+        {/* dibujitos impresos */}
+        {[
+          [-0.3, 0.25],
+          [0.32, 0.4],
+          [-0.12, 0.62],
+          [0.25, 0.75],
+        ].map(([x, y], i) => (
+          <path key={i} d="M0,3 C-4,-2 -7,1 0,7 C7,1 4,-2 0,3z" transform={`translate(${x * W} ${-H + d * 0.5 + y * H}) scale(1.2)`} fill="#ffffff" opacity={0.85} />
+        ))}
+        {/* tapa y moño */}
+        <polygon points={`${-W / 2},${-H + d * 0.5} ${W / 2},${-H + d * 0.5} ${W / 2 - d * 0.35},${-H - d * 0.6} ${-W / 2 + d * 0.35},${-H - d * 0.6}`} fill="#ffffff" opacity={0.25} stroke="#ffffff" strokeOpacity={0.8} />
+        <g transform={`translate(0 ${-H - d * 0.1})`} fill="#ffffff" stroke="#e9dfe8" strokeWidth={1}>
+          <ellipse cx={-16} cy={-6} rx={18} ry={9} transform="rotate(-18 -16 -6)" opacity={0.9} />
+          <ellipse cx={16} cy={-6} rx={18} ry={9} transform="rotate(18 16 -6)" opacity={0.9} />
+          <circle r={6} />
+        </g>
+      </g>
+    ),
+  };
+}
+
 export function renderPlate(plate: Plate, vein: string, wax: string, uid: string, tint?: string | null): PlateRender {
   if (plate.photo) return photoPlate(plate, uid, tint, wax);
+  if (plate.kind === 'caja') return giftBox(plate, uid);
   if (plate.kind === 'contenedor' || plate.shape === 'cesta') return basket(plate, vein, wax, uid);
   return flatPlate(plate, vein, uid);
 }

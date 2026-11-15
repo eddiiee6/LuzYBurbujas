@@ -19,14 +19,19 @@ export function WaxPainter({
   photo,
   mask,
   oval,
+  title = 'Pinta dónde va la cera',
+  hint = 'Lo rosa es la cera.',
   onDone,
   onCancel,
 }: {
   photo: string;
   /** Máscara guardada antes, para seguir editándola. */
   mask?: string;
-  /** Óvalo de inicio en fracciones de la foto (centro y radios). */
-  oval: { cx: number; cy: number; rx: number; ry: number };
+  /** Óvalo de inicio en fracciones de la foto (centro y radios). Sin él no se ofrece. */
+  oval?: { cx: number; cy: number; rx: number; ry: number };
+  /** Título y nota del editor (por defecto: cera). */
+  title?: string;
+  hint?: string;
   onDone: (r: WaxPaintResult) => void | Promise<void>;
   onCancel: () => void;
 }) {
@@ -38,6 +43,17 @@ export function WaxPainter({
   const [busy, setBusy] = useState(false);
   const [msg, setMsg] = useState<string | null>(null);
   const undo = useRef<ImageData[]>([]);
+  // Área visible: la foto se ajusta para caber completa (zoom 1) y el zoom acerca desde ahí.
+  const areaRef = useRef<HTMLDivElement>(null);
+  const [area, setArea] = useState<{ w: number; h: number } | null>(null);
+  useEffect(() => {
+    const el = areaRef.current;
+    if (!el) return;
+    const ro = new ResizeObserver(() => setArea({ w: el.clientWidth - 32, h: el.clientHeight - 32 }));
+    ro.observe(el);
+    return () => ro.disconnect();
+  }, []);
+  const fitWidth = size && area ? Math.max(120, Math.min(area.w, (area.h * size.w) / size.h)) : null;
   const last = useRef<{ x: number; y: number } | null>(null);
 
   // Tamaño del lienzo según la foto (máx. 800 px de ancho).
@@ -118,7 +134,7 @@ export function WaxPainter({
 
   const startOval = () => {
     const c = ctx();
-    if (!c || !size) return;
+    if (!c || !size || !oval) return;
     snapshot();
     c.fillStyle = PAINT;
     c.beginPath();
@@ -157,7 +173,7 @@ export function WaxPainter({
           if (y > y1) y1 = y;
         }
     if (x1 < 0) {
-      setMsg('Pinta primero la zona donde va la cera.');
+      setMsg('Pinta primero la zona.');
       return;
     }
     // Máscara final: blanco donde se pintó, transparente en lo demás.
@@ -188,9 +204,9 @@ export function WaxPainter({
   };
 
   return (
-    <div className="painter" role="dialog" aria-modal="true" aria-label="Pintar la zona de cera">
+    <div className="painter" role="dialog" aria-modal="true" aria-label={title}>
       <div className="painter-bar">
-        <strong>Pinta dónde va la cera</strong>
+        <strong>{title}</strong>
         <div className="painter-actions">
           <button type="button" className="btn ghost small" onClick={onCancel} disabled={busy}>
             Cancelar
@@ -222,9 +238,11 @@ export function WaxPainter({
           Zoom <input type="range" min={1} max={4} step={0.25} value={zoom} onChange={(e) => setZoom(Number(e.target.value))} />
         </label>
         <div className="painter-actions">
-          <button type="button" className="btn ghost small" onClick={startOval}>
-            ⬭ Empezar con óvalo
-          </button>
+          {oval && (
+            <button type="button" className="btn ghost small" onClick={startOval}>
+              ⬭ Empezar con óvalo
+            </button>
+          )}
           <button type="button" className="btn ghost small" onClick={doUndo}>
             ↶ Deshacer
           </button>
@@ -233,12 +251,12 @@ export function WaxPainter({
           </button>
         </div>
         {msg && <p className="warn">{msg}</p>}
-        <small className="muted">Con ✋ Mover puedes desplazarte cuando hay zoom. Lo rosa es la cera.</small>
+        <small className="muted">Con ✋ Mover puedes desplazarte cuando hay zoom. {hint}</small>
       </div>
 
-      <div className="painter-area">
-        {size && (
-          <div className="painter-sheet" style={{ width: `${zoom * 100}%`, aspectRatio: `${size.w} / ${size.h}` }}>
+      <div className="painter-area" ref={areaRef}>
+        {size && fitWidth && (
+          <div className="painter-sheet" style={{ width: `${fitWidth * zoom}px`, aspectRatio: `${size.w} / ${size.h}` }}>
             <img src={photo} alt="" draggable={false} />
             <canvas
               ref={canvasRef}

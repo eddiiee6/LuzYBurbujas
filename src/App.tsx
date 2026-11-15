@@ -7,6 +7,7 @@ import Home from './pages/Home';
 import CatalogPage from './pages/CatalogPage';
 import Customizer from './pages/Customizer';
 import Order from './pages/Order';
+import Arrangements, { ArrangementPage } from './pages/Arrangements';
 
 // El panel de administración se descarga solo cuando se visita.
 const Admin = lazy(() => import('./admin/Admin'));
@@ -44,6 +45,8 @@ export default function App() {
               <Route index element={<Home />} />
               <Route path="catalogo" element={<CatalogPage />} />
               <Route path="personaliza" element={<Customizer />} />
+              <Route path="arreglos" element={<Arrangements />} />
+              <Route path="arreglos/:slug" element={<ArrangementPage />} />
               <Route path="pedido" element={<Order />} />
               <Route
                 path="admin"

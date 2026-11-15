@@ -156,3 +156,68 @@ export function Slider({
     </label>
   );
 }
+
+/** Varias fotos (con fondo) para un arreglo: subir, ordenar y quitar. */
+export function PhotoList({ value, name, onChange }: { value: string[]; name: string; onChange: (v: string[]) => void }) {
+  const [busy, setBusy] = useState(false);
+  const [err, setErr] = useState<string | null>(null);
+  const move = (i: number, d: -1 | 1) => {
+    const j = i + d;
+    if (j < 0 || j >= value.length) return;
+    const next = [...value];
+    [next[i], next[j]] = [next[j], next[i]];
+    onChange(next);
+  };
+  return (
+    <div className="aphotos">
+      <div className="aphotos-grid">
+        {value.map((src, i) => (
+          <figure key={src + i} className="aphotos-item">
+            <img src={src} alt="" />
+            {i === 0 && <span className="pill">Principal</span>}
+            <div className="aphotos-actions">
+              <button type="button" className="link-btn" onClick={() => move(i, -1)} aria-label="Mover antes" disabled={i === 0}>
+                ←
+              </button>
+              <button type="button" className="link-btn" onClick={() => onChange(value.filter((_, j) => j !== i))}>
+                Quitar
+              </button>
+              <button type="button" className="link-btn" onClick={() => move(i, 1)} aria-label="Mover después" disabled={i === value.length - 1}>
+                →
+              </button>
+            </div>
+          </figure>
+        ))}
+      </div>
+      <label className="btn ghost small">
+        {busy ? 'Subiendo…' : '+ Agregar fotos'}
+        <input
+          type="file"
+          accept="image/png,image/webp,image/jpeg"
+          multiple
+          hidden
+          onChange={async (e) => {
+            const files = Array.from(e.target.files ?? []);
+            if (!files.length) return;
+            setBusy(true);
+            setErr(null);
+            try {
+              const urls: string[] = [];
+              for (const f of files) {
+                const { blob } = await prepareCutout(f, 1200);
+                urls.push(await repo.uploadImage(blob, name));
+              }
+              onChange([...value, ...urls]);
+            } catch (x) {
+              setErr(friendlyError(x));
+            } finally {
+              setBusy(false);
+              e.target.value = '';
+            }
+          }}
+        />
+      </label>
+      {err && <small className="warn">{err}</small>}
+    </div>
+  );
+}
