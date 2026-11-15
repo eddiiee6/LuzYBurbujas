@@ -36,8 +36,8 @@ export default function Customizer() {
   const plateParam = params.get('placa');
   // Solo las placas que se ofrecen para este tipo: velas → contenedores, jabones → planas.
   const typePlates = plates.filter((p) => plateAllowsType(p, type));
-  const plate: Plate | null =
-    plateParam === 'ninguna' ? null : (typePlates.find((p) => p.id === plateParam) ?? typePlates[0] ?? null);
+  // Por defecto "Sin placa": la presentación solo cambia si el cliente la elige.
+  const plate: Plate | null = typePlates.find((p) => p.id === plateParam) ?? null;
   // Con foto real de la placa, las vetas son las de la foto: no se eligen.
   const vein = plate && !plate.photo
     ? (plate.veinColors.find((v) => v.replace('#', '') === params.get('veta')) ?? plate.veinColors[0] ?? null)
@@ -339,6 +339,7 @@ export default function Customizer() {
                     setAnim((a) => ({ ...a, plate: a.plate + 1 }));
                   }}
                 >
+                  {photosFor(mold, p?.id ?? null, type).length > 0 && <span aria-label="con foto real">📷 </span>}
                   {p ? p.name.replace(/^Placa /, '') : 'Sin placa'}
                 </button>
               );
