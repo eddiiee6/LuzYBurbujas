@@ -7,12 +7,13 @@ import { coverPhoto } from '../lib/gallery';
 import { Stage } from '../components/Stage';
 import type { Arrangement, ArrangementPiece, Catalog } from '../types';
 import { Chips } from '../components/Picker';
+import { FitPhoto } from '../components/FitPhoto';
 
 /** Tarjeta de arreglo para la lista y la portada. */
 export function ArrangementCard({ a }: { a: Arrangement }) {
   return (
     <Link to={`/arreglos/${a.slug}`} className="mold-card arr-card">
-      <div className="arr-card-photo">{a.photos[0] ? <img src={a.photos[0]} alt={a.name} loading="lazy" /> : <span>💐</span>}</div>
+      <div className="arr-card-photo">{a.photos[0] ? <FitPhoto src={a.photos[0]} alt={a.name} /> : <span>💐</span>}</div>
       <div className="mold-card-body">
         <span className="eyebrow">Arreglo</span>
         <h3>{a.name}</h3>
@@ -172,7 +173,7 @@ export function ArrangementPage() {
   return (
     <main className="section container arr-page">
       <div className="arr-gallery">
-        <div className="arr-main">{current ? <img src={current} alt={a.name} /> : <span>💐</span>}</div>
+        <div className="arr-main">{current ? <FitPhoto key={current} className="anim-fade" src={current} alt={a.name} /> : <span>💐</span>}</div>
         {a.photos.length > 1 && (
           <div className="arr-thumbs">
             {a.photos.map((src, i) => (
