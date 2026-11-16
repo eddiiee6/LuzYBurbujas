@@ -1,5 +1,5 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useState, type ReactNode } from 'react';
-import type { ArrangementItem, CartItem, Catalog, Design, DesignItem } from '../types';
+import type { Arrangement, ArrangementItem, ArrangementPiece, CartItem, Catalog, Design, DesignItem } from '../types';
 import { designPrice, money, typeLabel, veinName } from './rules';
 
 const LS_KEY = 'lyb.cart.v1';
@@ -58,7 +58,11 @@ export function CartProvider({ children }: { children: ReactNode }) {
     setItems((prev) => {
       const same = prev.find(
         (i): i is ArrangementItem =>
-          !isDesign(i) && i.arrangementId === a.arrangementId && i.colors === a.colors && i.essenceId === a.essenceId,
+          !isDesign(i) &&
+          i.arrangementId === a.arrangementId &&
+          i.colors === a.colors &&
+          i.essenceId === a.essenceId &&
+          JSON.stringify(i.pieces ?? []) === JSON.stringify(a.pieces ?? []),
       );
       if (same) return prev.map((i) => (i === same ? { ...i, qty: i.qty + qty } : i));
       return [...prev, { ...a, kind: 'arreglo', id: crypto.randomUUID(), qty }];
@@ -113,8 +117,27 @@ export function itemExists(c: Catalog, i: CartItem): boolean {
   return isDesign(i) ? c.molds.some((m) => m.id === i.moldId) : c.arrangements.some((a) => a.id === i.arrangementId);
 }
 
+/** Precio por pieza de un arreglo, con mayoreo (p. ej. −$10 c/u desde 5). */
+export function arrangementUnitPrice(c: Catalog, a: Arrangement | undefined, qty: number): number {
+  if (!a) return 0;
+  const min = c.settings.wholesaleMinQty ?? 0;
+  const off = c.settings.wholesaleDiscount ?? 0;
+  return min > 0 && off > 0 && qty >= min ? Math.max(0, a.price - off) : a.price;
+}
+
 export function itemPrice(c: Catalog, i: CartItem): number {
-  return isDesign(i) ? designPrice(c, i) : (c.arrangements.find((a) => a.id === i.arrangementId)?.price ?? 0);
+  return isDesign(i) ? designPrice(c, i) : arrangementUnitPrice(c, c.arrangements.find((a) => a.id === i.arrangementId), i.qty);
+}
+
+/** "2 × Jabón Rosa, 1 × Vela Pino, 1 a elección" */
+export function describePieces(c: Catalog, pieces: ArrangementPiece[]): string {
+  const counts = new Map<string, number>();
+  for (const p of pieces) {
+    const mold = p.moldId ? c.molds.find((m) => m.id === p.moldId) : undefined;
+    const label = mold ? `${p.type ? typeLabel[p.type] : 'Jabón o vela'} ${mold.name}` : 'a elección de Lulú';
+    counts.set(label, (counts.get(label) ?? 0) + 1);
+  }
+  return Array.from(counts, ([label, n]) => `${n} × ${label}`).join(', ');
 }
 
 /** Texto legible de cualquier artículo del pedido. */
@@ -123,6 +146,7 @@ export function describeItem(c: Catalog, i: CartItem): string[] {
   const a = c.arrangements.find((x) => x.id === i.arrangementId);
   const essence = i.essenceId ? c.essences.find((e) => e.id === i.essenceId) : undefined;
   const lines = [`Arreglo ${a?.name ?? '¿?'}`];
+  if (i.pieces?.length) lines.push(`Piezas: ${describePieces(c, i.pieces)}`);
   lines.push(i.colors.trim() ? `Colores: ${i.colors.trim()}` : 'Colores como en la foto');
   lines.push(`Esencia: ${essence?.name ?? 'sin aroma'}`);
   return lines;
@@ -141,7 +165,8 @@ export function whatsappLink(c: Catalog, items: CartItem[], customer: Customer):
     const [first, ...rest] = describeItem(c, it);
     parts.push(`${n + 1}. ${it.qty} × ${first}`);
     rest.forEach((l) => parts.push(`   ${l}`));
-    parts.push(`   ${money(itemPrice(c, it))} c/u`);
+    const wholesale = !isDesign(it) && (c.settings.wholesaleMinQty ?? 0) > 0 && it.qty >= (c.settings.wholesaleMinQty ?? 0);
+    parts.push(`   ${money(itemPrice(c, it))} c/u${wholesale ? ' (precio de mayoreo)' : ''}`);
   });
   parts.push('', `Total aproximado: ${money(total)}`);
   if (customer.name.trim()) parts.push(`Nombre: ${customer.name.trim()}`);

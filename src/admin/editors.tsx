@@ -1,4 +1,4 @@
-import { DEFAULT_MOLD_FIT, DEFAULT_PLATE_FIT, DEFAULT_WAX, type Arrangement, type Catalog, type Collection, type ColorOption, type Essence, type GalleryPhoto, type Mold, type MoldArt, type Plate } from '../types';
+import { DEFAULT_MOLD_FIT, DEFAULT_PLATE_FIT, DEFAULT_WAX, type Arrangement, type ArrangementPiece, type Catalog, type Collection, type ColorOption, type Essence, type GalleryPhoto, type Mold, type MoldArt, type Plate } from '../types';
 import { Stage } from '../components/Stage';
 import { useState } from 'react';
 import { moldColors, plateColors, plateFits, plateTypes } from '../lib/rules';
@@ -597,7 +597,11 @@ export function CollectionEditor({ item, set }: Ed<Collection>) {
   );
 }
 
-export function ArrangementEditor({ item, set }: Ed<Arrangement>) {
+export function ArrangementEditor({ item, set, catalog }: Ed<Arrangement>) {
+  const n = item.pieces ?? 0;
+  const defaults = Array.from({ length: n }, (_, i) => item.defaultPieces?.[i] ?? { moldId: null, type: null });
+  const setPiece = (i: number, patch: Partial<ArrangementPiece>) =>
+    set({ defaultPieces: defaults.map((p, j) => (j === i ? { ...p, ...patch } : p)) });
   return (
     <div className="editor-fields">
       <Field label="Nombre">
@@ -623,7 +627,39 @@ export function ArrangementEditor({ item, set }: Ed<Arrangement>) {
       <Field label="Fotos" hint="Fotos reales del arreglo, con fondo. La primera es la principal.">
         <PhotoList value={item.photos} name={item.slug || item.id} onChange={(photos) => set({ photos })} />
       </Field>
-      <Check label="El cliente puede pedirlo en otros colores" value={item.customColors} onChange={(customColors) => set({ customColors })} />
+      <Field label="Número de piezas que elige el cliente" hint="0 = arreglo fijo (no se eligen piezas). Ej. Bandeja 12, Concha 3, Cesta 5, Bolsa 3.">
+        <Num step={1} value={item.pieces ?? 0} onChange={(v) => set({ pieces: Math.max(0, Math.min(40, Math.round(v ?? 0))) })} />
+      </Field>
+      {n > 0 && (
+        <fieldset className="afit">
+          <legend>Piezas sugeridas</legend>
+          <small>Lo que aparece ya elegido; el cliente lo puede cambiar. Déjalas en "A elección" para que el cliente elija desde cero.</small>
+          <ol className="piece-list">
+            {defaults.map((p, i) => (
+              <li key={i} className="piece-row admin-piece">
+                <span className="pill">{i + 1}</span>
+                <div className="row2">
+                  <Select
+                    value={p.moldId ?? ''}
+                    onChange={(moldId) => setPiece(i, { moldId: moldId || null })}
+                    options={[{ value: '', label: 'A elección' }, ...catalog.molds.map((m) => ({ value: m.id, label: m.name }))]}
+                  />
+                  <Select
+                    value={p.type ?? ''}
+                    onChange={(t) => setPiece(i, { type: (t || null) as ArrangementPiece['type'] })}
+                    options={[
+                      { value: '', label: 'Jabón o vela' },
+                      { value: 'jabon', label: 'Jabón' },
+                      { value: 'vela', label: 'Vela' },
+                    ]}
+                  />
+                </div>
+              </li>
+            ))}
+          </ol>
+        </fieldset>
+      )}
+      <Check label="El cliente puede escribir los colores que quiere" value={item.customColors} onChange={(customColors) => set({ customColors })} />
       <div className="row2">
         <Check label="Visible en el sitio" value={item.active} onChange={(active) => set({ active })} />
         <Check label="Destacado en inicio" value={!!item.featured} onChange={(featured) => set({ featured })} />

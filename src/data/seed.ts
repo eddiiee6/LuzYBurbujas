@@ -14,6 +14,8 @@ export const seedCatalog: Catalog = {
     whatsapp: '525513555143',
     instagram: '',
     facebook: '',
+    wholesaleMinQty: 5,
+    wholesaleDiscount: 10,
   },
 
   collections: [

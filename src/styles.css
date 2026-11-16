@@ -1202,18 +1202,13 @@ textarea {
 
 /* ---------- Arreglos ---------- */
 .arr-card-photo {
+  position: relative;
   aspect-ratio: 4 / 3;
   display: grid;
   place-items: center;
   background: var(--pink-100);
   font-size: 3rem;
   overflow: hidden;
-}
-
-.arr-card-photo img {
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
 }
 
 .arr-page {
@@ -1235,6 +1230,7 @@ textarea {
 }
 
 .arr-main {
+  position: relative;
   aspect-ratio: 1;
   border-radius: 28px;
   overflow: hidden;
@@ -1244,12 +1240,6 @@ textarea {
   display: grid;
   place-items: center;
   font-size: 4rem;
-}
-
-.arr-main img {
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
 }
 
 .arr-thumbs {
@@ -1268,6 +1258,74 @@ textarea {
 .arr-title {
   font-size: 2rem;
   margin: 0;
+}
+
+.wholesale {
+  margin: -4px 0 0;
+  font-weight: 500;
+  color: var(--purple);
+}
+
+.piece-list {
+  display: grid;
+  gap: 8px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  counter-reset: pieza;
+}
+
+.piece-row {
+  display: grid;
+  grid-template-columns: 56px 1fr;
+  gap: 10px;
+  align-items: center;
+  padding: 8px;
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  background: var(--white);
+}
+
+.admin-piece {
+  grid-template-columns: 36px 1fr;
+}
+
+.piece-thumb {
+  display: grid;
+  place-items: center;
+  width: 56px;
+  height: 56px;
+  border-radius: 12px;
+  overflow: hidden;
+  object-fit: cover;
+  background: var(--pink-50);
+}
+
+.piece-thumb svg {
+  width: 100%;
+  height: 100%;
+}
+
+.piece-any {
+  font-size: 1.6rem;
+}
+
+.piece-fields {
+  display: grid;
+  gap: 6px;
+}
+
+.piece-fields select {
+  width: 100%;
+  padding: 8px 10px;
+  border: 2px solid var(--line);
+  border-radius: 10px;
+  background: var(--white);
+}
+
+.piece-types .chip {
+  padding: 4px 12px;
+  font-size: 0.85rem;
 }
 
 .arr-includes {
