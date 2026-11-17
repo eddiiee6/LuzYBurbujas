@@ -3,6 +3,7 @@ import { Link, useSearchParams } from 'react-router-dom';
 import { useCatalog, useLookup } from '../data/CatalogContext';
 import { comboOffered, hasPhotos, photosFor } from '../lib/gallery';
 import { FitPhoto } from '../components/FitPhoto';
+import { SelectSheet } from '../components/SelectSheet';
 import { PhotoPending } from '../components/PhotoPending';
 import { Chips, Picker, Swatches } from '../components/Picker';
 import { useCart } from '../lib/cart';
@@ -45,6 +46,7 @@ export default function Customizer() {
   const essence = look.essence.get(params.get('esencia') ?? '') ?? null;
 
   const [photoIdx, setPhotoIdx] = useState(0);
+  const [sheet, setSheet] = useState<'molde' | 'presentacion' | null>(null);
   // El texto de "desliza…" se oculta después de la primera vez que se usa.
   const [hintSeen, setHintSeen] = useState(() => {
     try {
@@ -247,24 +249,9 @@ export default function Customizer() {
           onPrev={() => stepMold(-1)}
           onNext={() => stepMold(1)}
         >
-          <div className="thumbs">
-            {molds.map((m) => (
-              <button
-                key={m.id}
-                type="button"
-                className="thumb"
-                aria-pressed={m.id === mold.id}
-                aria-label={m.name}
-                onClick={() => {
-                  const t = availableTypes(m).includes(type) ? type : availableTypes(m)[0];
-                  update({ molde: m.slug, tipo: t ?? null, color: m.defaultColorId });
-                  setPhotoIdx(0);
-                }}
-              >
-                {m.gallery?.length ? <img className="thumb-photo" src={m.gallery[0].url} alt="" /> : <PhotoPending small />}
-              </button>
-            ))}
-          </div>
+          <button type="button" className="btn ghost small wide sheet-open" onClick={() => setSheet('molde')}>
+            🖼️ Ver todos los moldes ({molds.length})
+          </button>
         </Picker>
 
         <Chips
@@ -289,26 +276,9 @@ export default function Customizer() {
           onPrev={() => stepPlate(-1)}
           onNext={() => stepPlate(1)}
         >
-          <div className="plate-dots">
-            {plateOptions.map((p) => {
-              const ok = !p || plateFits(mold, p, type).ok;
-              return (
-                <button
-                  key={p?.id ?? 'ninguna'}
-                  type="button"
-                  className={`plate-dot ${ok ? '' : 'no-fit'}`}
-                  aria-pressed={p === plate}
-                  onClick={() => {
-                    update({ placa: p ? p.id : 'ninguna' });
-                    setPhotoIdx(0);
-                  }}
-                >
-                  {photosFor(mold, p?.id ?? null, type).length > 0 && <span aria-label="con foto real">📷 </span>}
-                  {p ? p.name.replace(/^Placa /, '') : 'Sin placa'}
-                </button>
-              );
-            })}
-          </div>
+          <button type="button" className="btn ghost small wide sheet-open" onClick={() => setSheet('presentacion')}>
+            🖼️ Ver presentaciones ({plateOptions.length})
+          </button>
         </Picker>
 
         <Chips
@@ -357,6 +327,48 @@ export default function Customizer() {
           )}
         </div>
       </div>
+      {sheet === 'molde' && (
+        <SelectSheet
+          title="Elige tu molde"
+          value={mold.id}
+          onClose={() => setSheet(null)}
+          options={molds.map((m) => ({
+            id: m.id,
+            title: m.name,
+            photo: m.gallery?.[0]?.url ?? null,
+            subtitle: availableTypes(m)
+              .map((t) => `${typeLabel[t]} ${money(m.prices[t] ?? 0)}`)
+              .join(' · '),
+          }))}
+          onSelect={(id) => {
+            const m = molds.find((x) => x.id === id)!;
+            const t = availableTypes(m).includes(type) ? type : availableTypes(m)[0];
+            update({ molde: m.slug, tipo: t ?? null, color: m.defaultColorId });
+            setPhotoIdx(0);
+          }}
+        />
+      )}
+      {sheet === 'presentacion' && (
+        <SelectSheet
+          title={`${mold.name} · elige la presentación`}
+          value={plate?.id ?? 'ninguna'}
+          onClose={() => setSheet(null)}
+          options={plateOptions.map((p) => {
+            const fitP = p ? plateFits(mold, p, type) : ({ ok: true } as const);
+            return {
+              id: p?.id ?? 'ninguna',
+              title: p ? p.name : 'Sola',
+              photo: photosFor(mold, p?.id ?? null, type, color.id)[0]?.url ?? null,
+              subtitle: p ? `+${money(p.price)} · ${plateKindLabel[p.kind]}` : 'Solo el producto',
+              disabled: fitP.ok ? undefined : fitP.reason,
+            };
+          })}
+          onSelect={(id) => {
+            update({ placa: id });
+            setPhotoIdx(0);
+          }}
+        />
+      )}
     </main>
   );
 }

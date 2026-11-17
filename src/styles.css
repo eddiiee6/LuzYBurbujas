@@ -410,6 +410,147 @@ textarea {
   position: relative;
 }
 
+.sheet-open {
+  margin-top: 10px;
+}
+
+.sheet-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 90;
+  display: grid;
+  place-items: center;
+  padding: 16px;
+  background: rgba(58, 36, 32, 0.45);
+  animation: fade 0.2s ease;
+}
+
+.sheet {
+  width: min(760px, 100%);
+  max-height: min(86vh, 900px);
+  display: flex;
+  flex-direction: column;
+  background: var(--cream);
+  border-radius: 24px;
+  box-shadow: 0 24px 60px -20px rgba(58, 36, 32, 0.5);
+  overflow: hidden;
+  animation: sheet-in 0.25s cubic-bezier(0.3, 1.2, 0.5, 1);
+}
+
+@keyframes sheet-in {
+  from {
+    transform: translateY(24px);
+    opacity: 0;
+  }
+}
+
+.sheet-head {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 16px 18px 10px;
+  border-bottom: 1px solid var(--line);
+}
+
+.sheet-head h2 {
+  margin: 0;
+  font-size: 1.15rem;
+}
+
+.sheet-grip {
+  display: none;
+}
+
+.sheet-close {
+  flex: none;
+  width: 36px;
+  height: 36px;
+  border: 0;
+  border-radius: 50%;
+  background: var(--pink-100);
+  cursor: pointer;
+  font-size: 1rem;
+}
+
+.sheet-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+  gap: 12px;
+  padding: 16px 18px 22px;
+  overflow-y: auto;
+}
+
+.sheet-option {
+  display: grid;
+  gap: 4px;
+  padding: 8px 8px 12px;
+  border: 2px solid var(--line);
+  border-radius: 18px;
+  background: var(--white);
+  text-align: center;
+  cursor: pointer;
+  transition:
+    transform 0.15s,
+    border-color 0.15s;
+}
+
+.sheet-option:hover:not(:disabled) {
+  transform: translateY(-2px);
+}
+
+.sheet-option[aria-pressed='true'] {
+  border-color: var(--pink-500);
+  box-shadow: 0 0 0 3px var(--pink-100);
+}
+
+.sheet-option:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
+.sheet-option small {
+  color: var(--choco-2);
+  font-size: 0.8rem;
+}
+
+.sheet-photo {
+  position: relative;
+  display: block;
+  aspect-ratio: 1;
+  border-radius: 12px;
+  overflow: hidden;
+  background: var(--pink-50);
+  margin-bottom: 4px;
+}
+
+@media (max-width: 600px) {
+  .sheet-backdrop {
+    place-items: end stretch;
+    padding: 0;
+  }
+  .sheet {
+    width: 100%;
+    max-height: 88vh;
+    border-radius: 24px 24px 0 0;
+  }
+  .sheet-grip {
+    display: block;
+    position: absolute;
+    top: 6px;
+    left: 50%;
+    width: 40px;
+    height: 4px;
+    margin-left: -20px;
+    border-radius: 99px;
+    background: var(--line);
+  }
+  .sheet-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
 .photo-pending {
   position: absolute;
   inset: 0;
