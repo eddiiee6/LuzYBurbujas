@@ -1,7 +1,7 @@
 import { useMemo, useRef, useState, type PointerEvent } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
 import { useCatalog, useLookup } from '../data/CatalogContext';
-import { photosFor } from '../lib/gallery';
+import { comboOffered, hasPhotos, photosFor } from '../lib/gallery';
 import { FitPhoto } from '../components/FitPhoto';
 import { PhotoPending } from '../components/PhotoPending';
 import { Chips, Picker, Swatches } from '../components/Picker';
@@ -25,7 +25,8 @@ export default function Customizer() {
 
   /* ---------- estado leído de la URL (así se puede compartir) ---------- */
   const mold = molds.find((m) => m.slug === params.get('molde')) ?? molds[0];
-  const types = mold ? availableTypes(mold) : [];
+  // Con fotos: solo jabón/vela si hay al menos una foto de ese tipo.
+  const types = mold ? availableTypes(mold).filter((t) => !hasPhotos(mold) || mold.gallery!.some((g) => !g.type || g.type === t)) : [];
   const type = (types.find((t) => t === params.get('tipo')) ?? types[0] ?? 'jabon') as ProductType;
   const moldColorList = mold ? moldColors(catalog.colors, mold) : colors;
   const startColorId = mold?.defaultColorId ?? '';
@@ -35,9 +36,12 @@ export default function Customizer() {
     moldColorList[0];
   const plateParam = params.get('placa');
   // Solo las presentaciones que se ofrecen para este tipo (jabón o vela).
-  const typePlates = plates.filter((p) => plateAllowsType(p, type));
+  // …y solo las que tienen foto real de esta combinación (si el molde ya tiene fotos).
+  const typePlates = mold ? plates.filter((p) => plateAllowsType(p, type) && comboOffered(mold, p.id, type)) : [];
+  const soloOffered = !mold || comboOffered(mold, null, type);
   // Por defecto "Sin placa": la presentación solo cambia si el cliente la elige.
-  const plate: Plate | null = typePlates.find((p) => p.id === plateParam) ?? null;
+  // Si "Sin placa" no tiene foto, se empieza por la primera presentación que sí tenga.
+  const plate: Plate | null = typePlates.find((p) => p.id === plateParam) ?? (soloOffered ? null : (typePlates[0] ?? null));
   const essence = look.essence.get(params.get('esencia') ?? '') ?? null;
 
   const [photoIdx, setPhotoIdx] = useState(0);
@@ -72,7 +76,7 @@ export default function Customizer() {
     setAdded(false);
   };
 
-  const plateOptions = useMemo(() => [null, ...plates.filter((p) => plateAllowsType(p, type))], [plates, type]);
+  const plateOptions = useMemo(() => [...(soloOffered ? [null] : []), ...typePlates], [soloOffered, typePlates]);
   const fit = mold && plate ? plateFits(mold, plate, type) : ({ ok: true } as const);
 
   if (!mold || !color) {

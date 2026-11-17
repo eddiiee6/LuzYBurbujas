@@ -80,8 +80,9 @@ export function MoldEditor({ item, set, catalog }: Ed<Mold>) {
         <fieldset className="afit">
           <legend>📷 Fotos reales</legend>
           <small>
-            Es lo que ve el cliente. En cada foto indica la presentación (sola, placa, cesta, cajita, tarjeta). Las combinaciones sin foto se
-            muestran como "Foto en preparación" y se pueden pedir igual.
+            Es lo que ve el cliente. En cada foto indica la presentación (sola, placa, cesta, cajita, tarjeta). Solo se ofrecen las
+            combinaciones con foto (📷); las que faltan (⏳) no aparecen. Mientras el molde no tenga ninguna foto, se muestra como "Foto en
+            preparación".
           </small>
           <GalleryEditor mold={item} catalog={catalog} onChange={(gallery) => set({ gallery })} />
           {combos.length > 0 && (
