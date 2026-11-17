@@ -12,7 +12,7 @@ type Tab = EntityKind | 'settings' | 'backup';
 const TABS: { id: Tab; label: string }[] = [
   { id: 'molds', label: 'Moldes' },
   { id: 'arrangements', label: 'Arreglos' },
-  { id: 'plates', label: 'Placas' },
+  { id: 'plates', label: 'Presentaciones' },
   { id: 'colors', label: 'Colores' },
   { id: 'essences', label: 'Esencias' },
   { id: 'collections', label: 'Colecciones' },
@@ -46,9 +46,7 @@ function blank(kind: EntityKind, c: Catalog): Catalog[EntityKind][number] {
         name: 'Nuevo molde',
         description: '',
         collectionId: c.collections[0]?.id ?? '',
-        art: 'margarita',
         baseWidthCm: 5,
-        heightCm: 2,
         prices: { jabon: 10, vela: 20 },
         defaultColorId: c.colors[0]?.id ?? '',
         active: false,
@@ -56,17 +54,14 @@ function blank(kind: EntityKind, c: Catalog): Catalog[EntityKind][number] {
       };
     case 'plates':
       return {
-        id: `placa-${uid()}`,
-        name: 'Nueva placa',
+        id: `presentacion-${uid()}`,
+        name: 'Nueva presentación',
         description: '',
-        shape: 'ovalada',
         kind: 'plana',
         size: 'grande',
         lengthCm: 9,
         widthCm: 6,
-        heightCm: 0.7,
         price: 10,
-        veinColors: ['#f29bb8'],
         blockedMoldIds: [],
         active: false,
         order,
