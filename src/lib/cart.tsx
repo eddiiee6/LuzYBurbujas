@@ -1,6 +1,7 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useState, type ReactNode } from 'react';
 import type { Arrangement, ArrangementItem, ArrangementPiece, CartItem, Catalog, Design, DesignItem } from '../types';
-import { designPrice, money, typeLabel, veinName } from './rules';
+import { designPrice, money, typeLabel } from './rules';
+import { photosFor } from './gallery';
 
 const LS_KEY = 'lyb.cart.v1';
 
@@ -45,8 +46,6 @@ export function CartProvider({ children }: { children: ReactNode }) {
           i.type === d.type &&
           i.colorId === d.colorId &&
           i.plateId === d.plateId &&
-          i.veinColor === d.veinColor &&
-          (i.plateColorId ?? null) === (d.plateColorId ?? null) &&
           i.essenceId === d.essenceId,
       );
       if (same) return prev.map((i) => (i === same ? { ...i, qty: i.qty + qty } : i));
@@ -97,12 +96,9 @@ export function describeDesign(c: Catalog, d: Design): string[] {
   const plate = d.plateId ? c.plates.find((p) => p.id === d.plateId) : undefined;
   const essence = d.essenceId ? c.essences.find((e) => e.id === d.essenceId) : undefined;
   const lines = [`${typeLabel[d.type]} ${mold?.name ?? '¿?'} · color ${color?.name.toLowerCase() ?? '¿?'}`];
-  const plateColor = d.plateColorId ? c.colors.find((x) => x.id === d.plateColorId) : undefined;
-  if (plate)
-    lines.push(
-      `${plate.name}${plateColor ? ` · color ${plateColor.name.toLowerCase()}` : d.veinColor ? ` · vetas ${veinName(d.veinColor)}` : ''}`,
-    );
-  else lines.push('Sin placa');
+  lines.push(plate ? plate.name : 'Sin placa');
+  // Combinación sin foto real: se puede pedir, pero conviene confirmar cómo queda.
+  if (mold && !photosFor(mold, d.plateId, d.type).length) lines.push('(sin foto, confirmar por WhatsApp)');
   lines.push(`Esencia: ${essence?.name ?? 'sin aroma'}`);
   return lines;
 }

@@ -23,7 +23,7 @@ export default function Home() {
               <br />
               que iluminan tu día
             </h1>
-            <p className="lead">{catalog.settings.tagline}. Elige el molde, el color, la esencia y la placa de yeso, y mira cómo queda antes de pedirlo.</p>
+            <p className="lead">{catalog.settings.tagline}. Elige el molde, el color, la esencia y la presentación, y pídelo por WhatsApp.</p>
             <div className="hero-cta">
               <Link to="/personaliza" className="btn primary">
                 ✨ Personaliza el tuyo
@@ -53,7 +53,7 @@ export default function Home() {
           <li>
             <b>2</b>
             <h3>Combínalo</h3>
-            <p>Color, esencia y placa de yeso marmoleada. Desliza para probar.</p>
+            <p>Color, esencia y presentación: placa, cesta, cajita o tarjeta.</p>
           </li>
           <li>
             <b>3</b>

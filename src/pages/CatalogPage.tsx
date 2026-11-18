@@ -52,13 +52,12 @@ export default function CatalogPage() {
 
       <section className="section">
         <h2 className="section-title">Presentaciones</h2>
-        <p className="muted center">Placas de yeso marmoleadas, contenedores y cajitas de regalo para tus velas y jabones.</p>
+        <p className="muted center">Placas de yeso, cestas, cajitas de regalo y tarjetas para tus velas y jabones.</p>
         <ul className="plate-list">
           {catalog.plates
             .filter((p) => p.active)
             .map((p) => (
               <li key={p.id} className="card">
-                {p.photo && <img className="plate-photo" src={p.photo} alt={p.name} loading="lazy" />}
                 <b>{p.name}</b>
                 <span>
                   {p.lengthCm} × {p.widthCm} cm · {plateKindLabel[p.kind]} · {plateTypes(p).map((t) => typeLabel[t].toLowerCase()).join(' y ')}

@@ -65,55 +65,6 @@ export function ColorInput({ value, onChange }: { value: string; onChange: (v: s
   );
 }
 
-export function PhotoInput({
-  value,
-  name,
-  onChange,
-}: {
-  value?: string;
-  name: string;
-  onChange: (v: string | undefined, aspect?: number, luma?: number) => void;
-}) {
-  const [busy, setBusy] = useState(false);
-  const [err, setErr] = useState<string | null>(null);
-  return (
-    <div className="aphoto">
-      {value ? <img src={value} alt="" /> : <div className="aphoto-empty">Sin foto · se usa la ilustración</div>}
-      <div className="aphoto-actions">
-        <label className="btn ghost small">
-          {busy ? 'Subiendo…' : value ? 'Cambiar foto' : 'Subir foto'}
-          <input
-            type="file"
-            accept="image/png,image/webp,image/jpeg"
-            hidden
-            onChange={async (e) => {
-              const f = e.target.files?.[0];
-              if (!f) return;
-              setBusy(true);
-              setErr(null);
-              try {
-                const { blob, aspect, luma } = await prepareCutout(f);
-                onChange(await repo.uploadImage(blob, name), aspect, luma);
-              } catch (x) {
-                setErr(friendlyError(x));
-              } finally {
-                setBusy(false);
-                e.target.value = '';
-              }
-            }}
-          />
-        </label>
-        {value && (
-          <button type="button" className="link-btn" onClick={() => onChange(undefined)}>
-            Quitar foto
-          </button>
-        )}
-      </div>
-      {err && <small className="warn">{err}</small>}
-    </div>
-  );
-}
-
 export const slugify = (s: string) =>
   s
     .toLowerCase()
@@ -121,41 +72,6 @@ export const slugify = (s: string) =>
     .replace(/[̀-ͯ]/g, '')
     .replace(/[^a-z0-9]+/g, '-')
     .replace(/^-|-$/g, '');
-
-/** Deslizador con valor visible y botón para volver al valor normal. */
-export function Slider({
-  label,
-  value,
-  min,
-  max,
-  step,
-  def,
-  format = (v) => String(v),
-  onChange,
-}: {
-  label: string;
-  value: number;
-  min: number;
-  max: number;
-  step: number;
-  def: number;
-  format?: (v: number) => string;
-  onChange: (v: number) => void;
-}) {
-  return (
-    <label className="aslider">
-      <span>
-        {label} <b>{format(value)}</b>
-        {value !== def && (
-          <button type="button" className="link-btn" onClick={() => onChange(def)}>
-            normal
-          </button>
-        )}
-      </span>
-      <input type="range" min={min} max={max} step={step} value={value} onChange={(e) => onChange(Number(e.target.value))} />
-    </label>
-  );
-}
 
 /** Varias fotos (con fondo) para un arreglo: subir, ordenar y quitar. */
 export function PhotoList({ value, name, onChange }: { value: string[]; name: string; onChange: (v: string[]) => void }) {

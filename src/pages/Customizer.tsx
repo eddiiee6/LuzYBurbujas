@@ -1,22 +1,23 @@
 import { useMemo, useRef, useState, type PointerEvent } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
 import { useCatalog, useLookup } from '../data/CatalogContext';
-import { Stage, stageToPng } from '../components/Stage';
-import { photosFor } from '../lib/gallery';
+import { comboOffered, hasPhotos, photosFor } from '../lib/gallery';
 import { FitPhoto } from '../components/FitPhoto';
+import { SelectSheet } from '../components/SelectSheet';
+import { PhotoPending } from '../components/PhotoPending';
 import { Chips, Picker, Swatches } from '../components/Picker';
 import { useCart } from '../lib/cart';
-import { availableTypes, designPrice, displayColorId, moldColors, money, plateAllowsType, plateColors, plateKindLabel, plateFits, typeLabel, veinName } from '../lib/rules';
+import { availableTypes, designPrice, moldColors, money, plateAllowsType, plateKindLabel, plateFits, typeLabel } from '../lib/rules';
 import type { Design, Plate, ProductType } from '../types';
 
-const SWIPE = 55; // unidades del escenario para cambiar de opción
+const SWIPE = 0.14; // fracción del ancho de la foto para cambiar de opción
 
 export default function Customizer() {
   const { catalog } = useCatalog();
   const look = useLookup();
   const cart = useCart();
   const [params, setParams] = useSearchParams();
-  const svgRef = useRef<SVGSVGElement>(null);
+  const stageRef = useRef<HTMLDivElement>(null);
 
   const molds = catalog.molds.filter((m) => m.active);
   const plates = catalog.plates.filter((p) => p.active);
@@ -25,30 +26,27 @@ export default function Customizer() {
 
   /* ---------- estado leído de la URL (así se puede compartir) ---------- */
   const mold = molds.find((m) => m.slug === params.get('molde')) ?? molds[0];
-  const types = mold ? availableTypes(mold) : [];
+  // Con fotos: solo jabón/vela si hay al menos una foto de ese tipo.
+  const types = mold ? availableTypes(mold).filter((t) => !hasPhotos(mold) || mold.gallery!.some((g) => !g.type || g.type === t)) : [];
   const type = (types.find((t) => t === params.get('tipo')) ?? types[0] ?? 'jabon') as ProductType;
   const moldColorList = mold ? moldColors(catalog.colors, mold) : colors;
-  const startColorId = mold ? displayColorId(mold) : '';
+  const startColorId = mold?.defaultColorId ?? '';
   const color =
     moldColorList.find((c) => c.id === params.get('color')) ??
     moldColorList.find((c) => c.id === startColorId) ??
     moldColorList[0];
   const plateParam = params.get('placa');
-  // Solo las placas que se ofrecen para este tipo: velas → contenedores, jabones → planas.
-  const typePlates = plates.filter((p) => plateAllowsType(p, type));
+  // Solo las presentaciones que se ofrecen para este tipo (jabón o vela).
+  // …y solo las que tienen foto real de esta combinación (si el molde ya tiene fotos).
+  const typePlates = mold ? plates.filter((p) => plateAllowsType(p, type) && comboOffered(mold, p.id, type)) : [];
+  const soloOffered = !mold || comboOffered(mold, null, type);
   // Por defecto "Sin placa": la presentación solo cambia si el cliente la elige.
-  const plate: Plate | null = typePlates.find((p) => p.id === plateParam) ?? null;
-  // Con foto real de la placa, las vetas son las de la foto: no se eligen.
-  const vein = plate && !plate.photo
-    ? (plate.veinColors.find((v) => v.replace('#', '') === params.get('veta')) ?? plate.veinColors[0] ?? null)
-    : null;
-  // Color de la placa con foto: independiente del color de la vela.
-  const plateColorList = plate ? plateColors(catalog.colors, plate) : [];
-  const plateColor = plateColorList.find((c) => c.id === params.get('colorplaca')) ?? null;
+  // Si "Sin placa" no tiene foto, se empieza por la primera presentación que sí tenga.
+  const plate: Plate | null = typePlates.find((p) => p.id === plateParam) ?? (soloOffered ? null : (typePlates[0] ?? null));
   const essence = look.essence.get(params.get('esencia') ?? '') ?? null;
 
-  const [lit, setLit] = useState(true);
   const [photoIdx, setPhotoIdx] = useState(0);
+  const [sheet, setSheet] = useState<'molde' | 'presentacion' | null>(null);
   // El texto de "desliza…" se oculta después de la primera vez que se usa.
   const [hintSeen, setHintSeen] = useState(() => {
     try {
@@ -69,7 +67,6 @@ export default function Customizer() {
   const [qty, setQty] = useState(1);
   const [added, setAdded] = useState(false);
   const [drag, setDrag] = useState<{ zone: 'mold' | 'plate'; startX: number; dx: number } | null>(null);
-  const [anim, setAnim] = useState({ mold: 0, plate: 0 });
 
   const update = (patch: Record<string, string | null>) => {
     const next = new URLSearchParams(params);
@@ -81,7 +78,7 @@ export default function Customizer() {
     setAdded(false);
   };
 
-  const plateOptions = useMemo(() => [null, ...plates.filter((p) => plateAllowsType(p, type))], [plates, type]);
+  const plateOptions = useMemo(() => [...(soloOffered ? [null] : []), ...typePlates], [soloOffered, typePlates]);
   const fit = mold && plate ? plateFits(mold, plate, type) : ({ ok: true } as const);
 
   if (!mold || !color) {
@@ -97,33 +94,28 @@ export default function Customizer() {
     type,
     colorId: color.id,
     plateId: plate?.id ?? null,
-    veinColor: vein,
-    plateColorId: plateColor?.id ?? null,
     essenceId: essence?.id ?? null,
   };
   const price = designPrice(catalog, design);
-  const theme = look.collection.get(mold.collectionId)?.theme;
 
   const stepMold = (dir: 1 | -1) => {
     markHint();
     const i = molds.indexOf(mold);
     const m = molds[(i + dir + molds.length) % molds.length];
     const t = availableTypes(m).includes(type) ? type : availableTypes(m)[0];
-    update({ molde: m.slug, tipo: t ?? null, color: displayColorId(m) });
-    setAnim((a) => ({ ...a, mold: a.mold + 1 }));
+    update({ molde: m.slug, tipo: t ?? null, color: m.defaultColorId });
     setPhotoIdx(0);
   };
   const stepPlate = (dir: 1 | -1) => {
     markHint();
     const i = plateOptions.indexOf(plate);
     const p = plateOptions[(i + dir + plateOptions.length) % plateOptions.length];
-    update({ placa: p ? p.id : 'ninguna', veta: null, colorplaca: null });
-    setAnim((a) => ({ ...a, plate: a.plate + 1 }));
+    update({ placa: p ? p.id : 'ninguna' });
     setPhotoIdx(0);
   };
 
   /* ---------- deslizar con el dedo sobre el escenario ---------- */
-  const toStage = (px: number) => (px * 400) / (svgRef.current?.getBoundingClientRect().width || 400);
+  const toStage = (px: number) => px / (stageRef.current?.getBoundingClientRect().width || 400);
   const onDown = (e: PointerEvent) => {
     const r = e.currentTarget.getBoundingClientRect();
     const zone = (e.clientY - r.top) / r.height < 0.6 ? 'mold' : 'plate';
@@ -162,20 +154,16 @@ export default function Customizer() {
   const photoColor = realPhoto?.colorId ? look.color.get(realPhoto.colorId) : undefined;
 
   const download = async () => {
+    if (!realPhoto) return;
     try {
-      const blob = realPhoto
-        ? await (await fetch(realPhoto.url)).blob()
-        : svgRef.current
-          ? await stageToPng(svgRef.current)
-          : null;
-      if (!blob) return;
+      const blob = await (await fetch(realPhoto.url)).blob();
       const a = document.createElement('a');
       a.href = URL.createObjectURL(blob);
-      a.download = `${mold.slug}-${color.id}.${realPhoto ? (blob.type.split('/')[1] ?? 'jpg') : 'png'}`;
+      a.download = `${mold.slug}${plate ? `-${plate.id}` : ''}.${blob.type.split('/')[1] ?? 'jpg'}`;
       a.click();
       setTimeout(() => URL.revokeObjectURL(a.href), 2000);
     } catch {
-      alert('No se pudo generar la imagen en este navegador.');
+      alert('No se pudo descargar la foto en este navegador.');
     }
   };
 
@@ -194,6 +182,7 @@ export default function Customizer() {
     <main className="customizer container">
       <div className="stage-col">
         <div
+          ref={stageRef}
           className={`stage-wrap ${drag ? 'dragging' : ''}`}
           onPointerDown={onDown}
           onPointerMove={onMove}
@@ -207,7 +196,7 @@ export default function Customizer() {
                 className="anim-fade"
                 src={realPhoto.url}
                 alt={`${mold.name}${plate ? ` en ${plate.name.toLowerCase()}` : ''}`}
-                style={drag ? { transform: `translateX(${(drag.dx * 100) / 400}%)` } : undefined}
+                style={drag ? { transform: `translateX(${drag.dx * 100}%)` } : undefined}
               />
               <span className="real-badge">📷 Foto real</span>
               {photoColor && photoColor.id !== color.id && (
@@ -230,42 +219,23 @@ export default function Customizer() {
               )}
             </div>
           ) : (
-          <Stage
-            ref={svgRef}
-            className="stage"
-            mold={mold}
-            type={type}
-            color={color.hex}
-            colorId={color.id}
-            plate={plate}
-            veinColor={vein}
-            plateColor={plateColor?.hex ?? null}
-            theme={theme}
-            lit={lit}
-            moldAnim={`m${anim.mold}`}
-            plateAnim={`p${anim.plate}`}
-            dragMold={drag?.zone === 'mold' ? drag.dx : 0}
-            dragPlate={drag?.zone === 'plate' ? drag.dx : 0}
-          />
+            <PhotoPending />
           )}
           {!fit.ok && <div className="stage-badge">🚫 {fit.reason}</div>}
           <div className="stage-hint" aria-hidden style={hintSeen ? { opacity: 0 } : undefined}>
             <span>⇆ desliza arriba para cambiar el molde</span>
-            <span>⇆ desliza abajo para cambiar la placa</span>
+            <span>⇆ desliza abajo para cambiar la presentación</span>
           </div>
-          {type === 'vela' && !mold.photo && !realPhoto && (
-            <button type="button" className="lit-toggle" onClick={() => setLit(!lit)} onPointerDown={(e) => e.stopPropagation()}>
-              {lit ? '🕯️ Apagar' : '🔥 Encender'}
-            </button>
-          )}
         </div>
         <div className="stage-actions">
           <button type="button" className="btn ghost small" onClick={share}>
             🔗 Compartir diseño
           </button>
-          <button type="button" className="btn ghost small" onClick={download}>
-            ⬇︎ Descargar imagen
-          </button>
+          {realPhoto && (
+            <button type="button" className="btn ghost small" onClick={download}>
+              ⬇︎ Descargar foto
+            </button>
+          )}
         </div>
       </div>
 
@@ -279,28 +249,9 @@ export default function Customizer() {
           onPrev={() => stepMold(-1)}
           onNext={() => stepMold(1)}
         >
-          <div className="thumbs">
-            {molds.map((m) => (
-              <button
-                key={m.id}
-                type="button"
-                className="thumb"
-                aria-pressed={m.id === mold.id}
-                aria-label={m.name}
-                onClick={() => {
-                  const t = availableTypes(m).includes(type) ? type : availableTypes(m)[0];
-                  update({ molde: m.slug, tipo: t ?? null, color: displayColorId(m) });
-                  setAnim((a) => ({ ...a, mold: a.mold + 1 }));
-                }}
-              >
-                {m.gallery?.length ? (
-                  <img className="thumb-photo" src={m.gallery[0].url} alt="" />
-                ) : (
-                  <Stage bare mold={m} type="jabon" color={look.color.get(displayColorId(m))?.hex ?? '#f5a3c0'} colorId={displayColorId(m)} plate={null} veinColor={null} />
-                )}
-              </button>
-            ))}
-          </div>
+          <button type="button" className="btn ghost small wide sheet-open" onClick={() => setSheet('molde')}>
+            🖼️ Ver todos los moldes ({molds.length})
+          </button>
         </Picker>
 
         <Chips
@@ -325,45 +276,10 @@ export default function Customizer() {
           onPrev={() => stepPlate(-1)}
           onNext={() => stepPlate(1)}
         >
-          <div className="plate-dots">
-            {plateOptions.map((p) => {
-              const ok = !p || plateFits(mold, p, type).ok;
-              return (
-                <button
-                  key={p?.id ?? 'ninguna'}
-                  type="button"
-                  className={`plate-dot ${ok ? '' : 'no-fit'}`}
-                  aria-pressed={p === plate}
-                  onClick={() => {
-                    update({ placa: p ? p.id : 'ninguna', veta: null, colorplaca: null });
-                    setAnim((a) => ({ ...a, plate: a.plate + 1 }));
-                  }}
-                >
-                  {photosFor(mold, p?.id ?? null, type).length > 0 && <span aria-label="con foto real">📷 </span>}
-                  {p ? p.name.replace(/^Placa /, '') : 'Sin placa'}
-                </button>
-              );
-            })}
-          </div>
+          <button type="button" className="btn ghost small wide sheet-open" onClick={() => setSheet('presentacion')}>
+            🖼️ Ver presentaciones ({plateOptions.length})
+          </button>
         </Picker>
-
-        {plateColorList.length > 0 && (
-          <Swatches
-            label="Color de la placa"
-            options={[{ id: 'original', hex: 'linear-gradient(135deg, transparent 46%, #d65a6b 46% 54%, transparent 54%), #ffffff', name: 'Original' }, ...plateColorList]}
-            value={plateColor?.id ?? 'original'}
-            onChange={(id) => update({ colorplaca: id === 'original' ? null : id })}
-          />
-        )}
-
-        {plate && !plate.photo && plate.veinColors.length > 0 && (
-          <Swatches
-            label="Color de las vetas"
-            options={plate.veinColors.map((v) => ({ id: v, hex: v, name: veinName(v) }))}
-            value={vein}
-            onChange={(v) => update({ veta: v.replace('#', '') })}
-          />
-        )}
 
         <Chips
           label="Esencia"
@@ -402,7 +318,7 @@ export default function Customizer() {
             </button>
           </div>
           <button type="button" className="btn primary wide" disabled={!fit.ok} onClick={addToCart}>
-            {fit.ok ? `Agregar al pedido · ${money(price * qty)}` : 'Elige otra placa'}
+            {fit.ok ? `Agregar al pedido · ${money(price * qty)}` : 'Elige otra presentación'}
           </button>
           {added && (
             <p className="added">
@@ -411,6 +327,48 @@ export default function Customizer() {
           )}
         </div>
       </div>
+      {sheet === 'molde' && (
+        <SelectSheet
+          title="Elige tu molde"
+          value={mold.id}
+          onClose={() => setSheet(null)}
+          options={molds.map((m) => ({
+            id: m.id,
+            title: m.name,
+            photo: m.gallery?.[0]?.url ?? null,
+            subtitle: availableTypes(m)
+              .map((t) => `${typeLabel[t]} ${money(m.prices[t] ?? 0)}`)
+              .join(' · '),
+          }))}
+          onSelect={(id) => {
+            const m = molds.find((x) => x.id === id)!;
+            const t = availableTypes(m).includes(type) ? type : availableTypes(m)[0];
+            update({ molde: m.slug, tipo: t ?? null, color: m.defaultColorId });
+            setPhotoIdx(0);
+          }}
+        />
+      )}
+      {sheet === 'presentacion' && (
+        <SelectSheet
+          title={`${mold.name} · elige la presentación`}
+          value={plate?.id ?? 'ninguna'}
+          onClose={() => setSheet(null)}
+          options={plateOptions.map((p) => {
+            const fitP = p ? plateFits(mold, p, type) : ({ ok: true } as const);
+            return {
+              id: p?.id ?? 'ninguna',
+              title: p ? p.name : 'Sola',
+              photo: photosFor(mold, p?.id ?? null, type, color.id)[0]?.url ?? null,
+              subtitle: p ? `+${money(p.price)} · ${plateKindLabel[p.kind]}` : 'Solo el producto',
+              disabled: fitP.ok ? undefined : fitP.reason,
+            };
+          })}
+          onSelect={(id) => {
+            update({ placa: id });
+            setPhotoIdx(0);
+          }}
+        />
+      )}
     </main>
   );
 }

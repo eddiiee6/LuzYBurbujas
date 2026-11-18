@@ -1,32 +1,39 @@
 import type { Catalog, ColorOption, Design, Mold, Plate, ProductType } from '../types';
 
-/** Margen mínimo (cm) entre la orilla del molde y la orilla de la placa. */
+/** Margen mínimo (cm) entre la orilla del molde y la orilla de la presentación. */
 const MARGIN_CM = 0.2;
 
 export type FitResult = { ok: true } | { ok: false; reason: string };
 
-/** Para qué productos se ofrece una placa (velas: contenedores; jabones: planas). */
+/**
+ * Para qué productos se ofrece una presentación. Por defecto: contenedores
+ * para velas, placas planas para jabones; cajitas y tarjetas para los dos.
+ */
 export function plateTypes(plate: Plate): ProductType[] {
   if (plate.forTypes?.length) return plate.forTypes;
-  if (plate.kind === 'caja') return ['vela', 'jabon'];
+  if (plate.kind === 'caja' || plate.kind === 'tarjeta') return ['vela', 'jabon'];
   return plate.kind === 'contenedor' ? ['vela'] : ['jabon'];
 }
 
-export const plateKindLabel: Record<Plate['kind'], string> = { plana: 'placa', contenedor: 'contenedor', caja: 'cajita' };
+export const plateKindLabel: Record<Plate['kind'], string> = {
+  plana: 'placa',
+  contenedor: 'contenedor',
+  caja: 'cajita',
+  tarjeta: 'tarjeta',
+};
 
-/** ¿Esta placa se ofrece para este tipo de producto? */
+/** ¿Esta presentación se ofrece para este tipo de producto? */
 export function plateAllowsType(plate: Plate, type: ProductType): boolean {
   return plateTypes(plate).includes(type);
 }
 
-/** ¿Este molde, en este tipo (jabón/vela), se puede poner en esta placa? */
+/** ¿Este molde, en este tipo (jabón/vela), se puede poner en esta presentación? */
 export function plateFits(mold: Mold, plate: Plate, type: ProductType): FitResult {
-  if (!plateAllowsType(plate, type))
-    return { ok: false, reason: type === 'vela' ? 'Para velas solo hay contenedores' : 'Para jabones solo hay placas planas' };
+  if (!plateAllowsType(plate, type)) return { ok: false, reason: `No disponible para ${type === 'vela' ? 'velas' : 'jabones'}` };
   if (plate.blockedMoldIds.includes(mold.id)) return { ok: false, reason: 'No disponible para este molde' };
   const space = Math.min(plate.lengthCm, plate.widthCm);
-  if (mold.baseWidthCm + MARGIN_CM > space)
-    return { ok: false, reason: `No cabe: el molde mide ${mold.baseWidthCm} cm y la placa ${space} cm` };
+  if (space > 0 && mold.baseWidthCm + MARGIN_CM > space)
+    return { ok: false, reason: `No cabe: el molde mide ${mold.baseWidthCm} cm y la presentación ${space} cm` };
   return { ok: true };
 }
 
@@ -37,26 +44,8 @@ export function availableTypes(mold: Mold): ProductType[] {
 /** Colores que se le ofrecen al cliente para este molde. */
 export function moldColors(colors: ColorOption[], mold: Mold): ColorOption[] {
   const active = colors.filter((c) => c.active);
-  // Foto que no se puede recolorear: solo existe en el color de la foto.
-  if (mold.photo && !mold.photoTintable) {
-    const own = active.filter((c) => c.id === mold.photoColorId);
-    return own.length ? own : active.filter((c) => c.id === mold.defaultColorId);
-  }
   const allowed = mold.allowedColorIds?.length ? active.filter((c) => mold.allowedColorIds!.includes(c.id)) : active;
   return allowed.length ? allowed : active;
-}
-
-/** Colores para recolorear una placa con foto (independientes de los de la vela). */
-export function plateColors(colors: ColorOption[], plate: Plate): ColorOption[] {
-  if (!plate.photo || !plate.photoTintable) return [];
-  const active = colors.filter((c) => c.active);
-  const allowed = plate.photoColorIds?.length ? active.filter((c) => plate.photoColorIds!.includes(c.id)) : active;
-  return allowed.length ? allowed : active;
-}
-
-/** Color con el que se muestra el molde en tarjetas y miniaturas. */
-export function displayColorId(mold: Mold): string {
-  return mold.photo && mold.photoColorId ? mold.photoColorId : mold.defaultColorId;
 }
 
 export const typeLabel: Record<ProductType, string> = { jabon: 'Jabón', vela: 'Vela' };
@@ -69,16 +58,3 @@ export function designPrice(c: Catalog, d: Design): number {
 
 export const money = (n: number) =>
   n.toLocaleString('es-MX', { style: 'currency', currency: 'MXN', maximumFractionDigits: 0 });
-
-/** Nombre del color de veta, para el mensaje de WhatsApp. */
-export function veinName(hex: string | null): string {
-  if (!hex) return '';
-  const names: Record<string, string> = {
-    '#f29bb8': 'rosa',
-    '#8fb8e8': 'azul',
-    '#c4a3e3': 'lila',
-    '#f3cf6b': 'amarillo',
-    '#8fd1b9': 'verde agua',
-  };
-  return names[hex.toLowerCase()] ?? hex;
-}

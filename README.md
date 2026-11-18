@@ -14,27 +14,21 @@ Sitio web de velas y jabones artesanales con **personalizador**: el cliente elig
 
 ### El personalizador
 
-- **Capas:** fondo según la temática → placa (atrás) → vela o jabón → placa (frente, para cestas).
-- **Se cambia como en un videojuego:** con las flechas ‹ ›, deslizando el dedo sobre la imagen (arriba cambia el molde, abajo cambia la placa) o tocando las miniaturas.
-- **Solo ofrece lo que cabe:** cada molde tiene su ancho en cm y cada placa su largo y ancho. Si no cabe, la placa aparece tachada y no se puede agregar. Las placas **contenedor** (la cera va dentro) solo se ofrecen para velas. Desde el admin se puede bloquear a mano un molde en una placa.
-- **Colores:** el producto se pinta del color elegido. La placa marmoleada permite elegir el color de las vetas.
-- **Vela encendida:** con llamita animada.
-- **Compartir y descargar:** el diseño queda en la URL (`/personaliza?molde=rosa&tipo=vela&color=rosa&placa=ovalada-grande…`) y se puede descargar como PNG.
+- El cliente elige **molde → jabón o vela → color → presentación** (sola, placa, cesta, cajita o tarjeta) y la esencia.
+- Se muestra la **foto real** de esa combinación (las mismas de Instagram), completa y sin recortar. Si hay varias, se pasan con puntitos.
+- Si la combinación aún no tiene foto, aparece **"📷 Foto en preparación"**; se puede pedir igual y el WhatsApp lo indica.
+- El color se elige libre: la foto es de referencia y el color pedido va en el mensaje.
+- Solo se ofrecen las presentaciones permitidas para el tipo (y donde el molde cabe por medidas).
 
-### Fotos reales en lugar de ilustraciones
+### Fotos
 
-Mientras no hay fotos, los moldes y placas se **dibujan por código**. Cuando tengas fotos:
-
-1. Toma **una foto por molde** (idealmente en blanco o color muy claro) y **una por placa**, todas desde el mismo ángulo: de frente y un poco desde arriba (~30°), con tripié, fondo liso y luz de día indirecta.
-2. Quita el fondo (por ejemplo, con Canva → "Eliminar fondo") y guarda en PNG.
-3. En `/admin` → Moldes o Placas → **Subir foto**. En los moldes, marca **"Teñir la foto"** para que el sitio la pinte del color que elija el cliente.
+En `/admin` → **Moldes** → **📷 Fotos reales**: se suben las fotos y en cada una se indica la presentación, si es vela/jabón y (opcional) el color. El editor muestra qué combinaciones ya tienen foto (📷) y cuáles faltan (⏳). La primera foto es la portada del molde.
 
 ## Tecnología
 
 | Parte | Elección |
 |---|---|
 | Frontend | React 19 + Vite + TypeScript |
-| Gráficos | SVG en capas (nítido en cualquier pantalla y fácil de recolorear) |
 | Datos | **Supabase** (Postgres + almacenamiento de fotos + login). Sin Supabase funciona en *modo local* |
 | Pedidos | Enlace de WhatsApp con el mensaje ya armado |
 | Hosting | Vercel o Netlify (gratis). Ya incluye `vercel.json` y `public/_redirects` |
@@ -46,9 +40,9 @@ src/
   types.ts              Modelo de datos (molde, placa, color, esencia, colección)
   data/seed.ts          Catálogo inicial (5 moldes, 3 placas, 7 esencias, 10 colores)
   data/repo.ts          Capa de datos: modo local (navegador) o Supabase
-  art/molds.tsx         Ilustraciones de los moldes
-  art/plates.tsx        Placas de yeso marmoleadas y cestas
-  components/Stage.tsx  Escenario en capas del personalizador
+  lib/gallery.ts        Fotos reales por combinación (molde + presentación + tipo)
+  components/FitPhoto   Foto completa con relleno difuminado
+  components/PhotoPending  Recuadro "Foto en preparación"
   lib/rules.ts          Reglas: qué cabe dónde, precios
   lib/cart.tsx          Pedido y mensaje de WhatsApp
   pages/                Inicio, Catálogo, Personaliza, Pedido

@@ -14,3 +14,13 @@ export function photosFor(mold: Mold, plateId: string | null, type: ProductType,
 export function coverPhoto(mold: Mold): GalleryPhoto | undefined {
   return mold.gallery?.[0];
 }
+
+/** ¿El molde ya tiene alguna foto real? Mientras no tenga, se ofrece todo con "Foto en preparación". */
+export function hasPhotos(mold: Mold): boolean {
+  return (mold.gallery?.length ?? 0) > 0;
+}
+
+/** ¿Se ofrece esta combinación? Con fotos, solo las que tienen foto real. */
+export function comboOffered(mold: Mold, plateId: string | null, type: ProductType): boolean {
+  return !hasPhotos(mold) || photosFor(mold, plateId, type).length > 0;
+}
