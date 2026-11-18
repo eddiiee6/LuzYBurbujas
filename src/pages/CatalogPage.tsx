@@ -1,7 +1,8 @@
 import { useState } from 'react';
 import { useCatalog } from '../data/CatalogContext';
 import { MoldCard } from '../components/MoldCard';
-import { availableTypes, plateKindLabel, plateTypes, typeLabel } from '../lib/rules';
+import { FitPhoto } from '../components/FitPhoto';
+import { availableTypes, money, plateKindLabel, plateTypes, typeLabel } from '../lib/rules';
 import type { ProductType } from '../types';
 
 export default function CatalogPage() {
@@ -58,11 +59,16 @@ export default function CatalogPage() {
             .filter((p) => p.active)
             .map((p) => (
               <li key={p.id} className="card">
+                {p.photo && (
+                  <span className="plate-photo">
+                    <FitPhoto src={p.photo} alt={p.name} />
+                  </span>
+                )}
                 <b>{p.name}</b>
                 <span>
                   {p.lengthCm} × {p.widthCm} cm · {plateKindLabel[p.kind]} · {plateTypes(p).map((t) => typeLabel[t].toLowerCase()).join(' y ')}
                 </span>
-                <span className="price-tag">+ ${p.price}</span>
+                <span className="price-tag">+ {money(p.price)}</span>
               </li>
             ))}
         </ul>

@@ -65,6 +65,8 @@ export interface Plate {
    * placas planas para jabones; cajitas y tarjetas para los dos.
    */
   forTypes?: ProductType[];
+  /** Foto de la presentación (vacía o de ejemplo) para la lista del catálogo. */
+  photo?: string;
   /** Moldes que no caben aunque las medidas digan que sí. */
   blockedMoldIds: string[];
   active: boolean;
