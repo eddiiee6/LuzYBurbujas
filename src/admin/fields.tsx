@@ -137,3 +137,51 @@ export function PhotoList({ value, name, onChange }: { value: string[]; name: st
     </div>
   );
 }
+
+/** Una sola foto (con o sin fondo): subir, cambiar o quitar. */
+export function SinglePhoto({ value, name, onChange }: { value?: string; name: string; onChange: (v: string | undefined) => void }) {
+  const [busy, setBusy] = useState(false);
+  const [err, setErr] = useState<string | null>(null);
+  return (
+    <div className="aphotos">
+      {value && (
+        <div className="aphotos-grid">
+          <figure className="aphotos-item">
+            <img src={value} alt="" />
+          </figure>
+        </div>
+      )}
+      <div className="aphotos-actions single">
+        <label className="btn ghost small">
+          {busy ? 'Subiendo…' : value ? 'Cambiar foto' : '+ Subir foto'}
+          <input
+            type="file"
+            accept="image/png,image/webp,image/jpeg"
+            hidden
+            onChange={async (e) => {
+              const f = e.target.files?.[0];
+              if (!f) return;
+              setBusy(true);
+              setErr(null);
+              try {
+                const { blob } = await prepareCutout(f, 1200);
+                onChange(await repo.uploadImage(blob, name));
+              } catch (x) {
+                setErr(friendlyError(x));
+              } finally {
+                setBusy(false);
+                e.target.value = '';
+              }
+            }}
+          />
+        </label>
+        {value && (
+          <button type="button" className="link-btn" onClick={() => onChange(undefined)}>
+            Quitar foto
+          </button>
+        )}
+      </div>
+      {err && <small className="warn">{err}</small>}
+    </div>
+  );
+}
