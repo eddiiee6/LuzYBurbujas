@@ -231,13 +231,20 @@ export function parseBackup(text: string): Catalog {
  */
 export async function uploadEmbeddedPhotos(c: Catalog, onProgress?: (done: number, total: number) => void): Promise<Catalog> {
   if (repo.mode !== 'supabase') return c;
-  const items = [...c.molds, ...c.plates].filter((x) => x.photo?.startsWith('data:'));
+  // Fotos reales de los moldes y fotos de los arreglos.
+  const jobs: { get: () => string; set: (url: string) => void; name: string }[] = [];
+  for (const m of c.molds)
+    for (const g of m.gallery ?? []) if (g.url.startsWith('data:')) jobs.push({ get: () => g.url, set: (u) => (g.url = u), name: m.slug || m.id });
+  for (const a of c.arrangements ?? [])
+    a.photos.forEach((url, i) => {
+      if (url.startsWith('data:')) jobs.push({ get: () => a.photos[i], set: (u) => (a.photos[i] = u), name: a.slug || a.id });
+    });
   let done = 0;
-  onProgress?.(done, items.length);
-  for (const item of items) {
-    const blob = await (await fetch(item.photo!)).blob();
-    item.photo = await repo.uploadImage(blob, item.id);
-    onProgress?.(++done, items.length);
+  onProgress?.(done, jobs.length);
+  for (const job of jobs) {
+    const blob = await (await fetch(job.get())).blob();
+    job.set(await repo.uploadImage(blob, job.name));
+    onProgress?.(++done, jobs.length);
   }
   return c;
 }

@@ -1,15 +1,12 @@
 /** Tipo de producto que se puede hacer con un mismo molde. */
 export type ProductType = 'jabon' | 'vela';
 
-/** Ilustraciones disponibles mientras no haya foto del molde. */
-export type MoldArt = 'margarita' | 'cempasuchil' | 'rosa' | 'copo' | 'pino';
-
 export interface Collection {
   id: string;
   name: string;
   description: string;
   order?: number;
-  /** Colores de la temática: fondo del escenario y acento. */
+  /** Colores de la temática (fondos de tarjetas y recuadros). */
   theme: { bg: string; bg2: string; accent: string };
 }
 
@@ -20,31 +17,15 @@ export interface Mold {
   name: string;
   description: string;
   collectionId: string;
-  /** Ilustración de respaldo cuando no hay foto. */
-  art: MoldArt;
-  /** Ancho que ocupa apoyado (cm). Sirve para saber en qué placas cabe. */
+  /** Ancho que ocupa apoyado (cm). Sirve para saber en qué presentaciones cabe. */
   baseWidthCm: number;
-  /** Alto aproximado (cm). Solo para escalar el dibujo. */
-  heightCm: number;
   /** Precio por tipo. Si un tipo no tiene precio, no se ofrece. */
   prices: Partial<Record<ProductType, number>>;
-  /** Color con el que aparece por defecto (id de Color). */
+  /** Color con el que aparece primero (id de Color). */
   defaultColorId: string;
-  /** Foto sin fondo (PNG/WebP transparente), idealmente del molde en blanco. */
-  photo?: string;
-  /** Proporción alto/ancho de la foto (se calcula al subirla). */
-  photoAspect?: number;
-  /** Ajuste fino de la foto: tamaño (1 = ancho real) y desplazamiento vertical. */
-  photoFit?: MoldPhotoFit;
-  /** Permite recolorear la foto a los otros colores (conserva luces y sombras). */
-  photoTintable?: boolean;
-  /** Color real del producto en la foto: con ese color se muestra sin cambios. */
-  photoColorId?: string;
-  /** Brillo promedio de la foto (0..1), se calcula al subirla. Sirve para recolorear. */
-  photoLuma?: number;
   /** Colores que se ofrecen para este molde. Vacío o sin definir = todos. */
   allowedColorIds?: string[];
-  /** Fotos reales por presentación. Si hay una para la combinación elegida, se muestra en lugar del montaje. */
+  /** Fotos reales por presentación. Lo que el cliente ve; sin foto: "Foto en preparación". */
   gallery?: GalleryPhoto[];
   active: boolean;
   featured?: boolean;
@@ -55,7 +36,7 @@ export interface Mold {
 export interface GalleryPhoto {
   id: string;
   url: string;
-  /** Presentación en la foto (id de placa/cesta/cajita). null = el producto solo. */
+  /** Presentación en la foto (id de presentación). null = el producto solo. */
   plateId: string | null;
   /** Si es vela o jabón. null = sirve para los dos. */
   type?: ProductType | null;
@@ -63,78 +44,25 @@ export interface GalleryPhoto {
   colorId?: string | null;
 }
 
-export interface MoldPhotoFit {
-  /** 1 = la foto mide el ancho real del molde. */
-  scale: number;
-  /** Unidades hacia abajo (+) o hacia arriba (-). */
-  offsetY: number;
-}
+/**
+ * plana: placa sobre la que se apoya. contenedor: la cera va dentro (cesta).
+ * caja: cajita de regalo. tarjeta: tarjeta impresa con el producto pegado.
+ */
+export type PlateKind = 'plana' | 'contenedor' | 'caja' | 'tarjeta';
 
-export interface PlatePhotoFit {
-  /** 1 = la foto mide el largo real de la placa. */
-  scale: number;
-  /** Dónde se apoya el producto respecto al centro de la foto (+ abajo). */
-  seatY: number;
-  /** Giro en grados para enderezar la placa. */
-  rotate: number;
-  /** Aplastar (<1) o estirar (>1) en vertical para igualar la inclinación. */
-  squash: number;
-  /** Contenedores: dibujar la cera dentro (por defecto sí en contenedores). */
-  waxOn?: boolean;
-  /** Ancho de la cera respecto al ancho de la foto (0..1). */
-  waxWidth?: number;
-  /** Inclinación de la superficie de cera: alto/ancho (0..1). */
-  waxTilt?: number;
-  /** Subir (-) o bajar (+) la superficie de cera respecto al punto de apoyo. */
-  waxY?: number;
-  /** Color de la cera: "vela" (igual que la vela, por defecto) o un color fijo (hex). */
-  waxColor?: string;
-  /** "ovalo": la cera es un óvalo con los controles. "pintado": la zona que se pintó. */
-  waxMode?: 'ovalo' | 'pintado';
-  /** Máscara pintada (PNG blanco sobre transparente, mismo encuadre que la foto). */
-  waxMask?: string;
-  /** Cajitas: máscara pintada de lo que va DELANTE del producto (acetato, moño, relleno). */
-  frontMask?: string;
-  /** Caja de lo pintado, en fracciones de la foto (0..1), para el brillo de la cera. */
-  waxBox?: { x: number; y: number; w: number; h: number };
-}
-
-export const DEFAULT_WAX = { waxWidth: 0.8, waxTilt: 0.32, waxY: 0 };
-
-export const DEFAULT_MOLD_FIT: MoldPhotoFit = { scale: 1, offsetY: 0 };
-export const DEFAULT_PLATE_FIT: PlatePhotoFit = { scale: 1, seatY: 0, rotate: 0, squash: 1 };
-
-export type PlateShape = 'ovalada' | 'redonda' | 'rectangular' | 'cesta';
-/** plana: el producto se apoya encima. contenedor: la cera va dentro. caja: cajita de presentación. */
-export type PlateKind = 'plana' | 'contenedor' | 'caja';
-
+/** Presentación: placa, cesta, cajita o tarjeta en la que se entrega el producto. */
 export interface Plate {
   id: string;
   name: string;
   description: string;
-  shape: PlateShape;
   kind: PlateKind;
   size: 'chica' | 'grande';
   lengthCm: number;
   widthCm: number;
-  heightCm: number;
   price: number;
-  /** Colores de veta que el cliente puede elegir (hex). */
-  veinColors: string[];
-  /** Foto sin fondo de la placa (opcional). */
-  photo?: string;
-  photoAspect?: number;
-  /** Ajuste fino de la foto para que coincida con el ángulo de los moldes. */
-  photoFit?: PlatePhotoFit;
-  /** Permite recolorear la foto de la placa (independiente del color de la vela). */
-  photoTintable?: boolean;
-  /** Brillo promedio de la foto (0..1), se calcula al subirla. */
-  photoLuma?: number;
-  /** Colores que se ofrecen para la placa con foto. Vacío o sin definir = todos. */
-  photoColorIds?: string[];
   /**
-   * Para qué tipo de producto se ofrece. Sin definir: los contenedores solo
-   * para velas y las placas planas solo para jabones.
+   * Para qué tipo de producto se ofrece. Sin definir: contenedores para velas,
+   * placas planas para jabones; cajitas y tarjetas para los dos.
    */
   forTypes?: ProductType[];
   /** Moldes que no caben aunque las medidas digan que sí. */
@@ -221,9 +149,6 @@ export interface Design {
   type: ProductType;
   colorId: string;
   plateId: string | null;
-  veinColor: string | null;
-  /** Color de la placa con foto (id de Color). Sin definir = color original de la foto. */
-  plateColorId?: string | null;
   essenceId: string | null;
 }
 

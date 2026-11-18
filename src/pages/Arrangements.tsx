@@ -2,9 +2,9 @@ import { useEffect, useState } from 'react';
 import { Link, useParams } from 'react-router-dom';
 import { useCatalog, useLookup } from '../data/CatalogContext';
 import { arrangementUnitPrice, useCart, whatsappHello } from '../lib/cart';
-import { availableTypes, displayColorId, money, typeLabel } from '../lib/rules';
+import { availableTypes, money, typeLabel } from '../lib/rules';
 import { coverPhoto } from '../lib/gallery';
-import { Stage } from '../components/Stage';
+import { PhotoPending } from '../components/PhotoPending';
 import type { Arrangement, ArrangementPiece, Catalog } from '../types';
 import { Chips } from '../components/Picker';
 import { FitPhoto } from '../components/FitPhoto';
@@ -77,17 +77,16 @@ function initialPieces(a: Arrangement | undefined): ArrangementPiece[] {
   return Array.from({ length: n }, (_, i) => a?.defaultPieces?.[i] ?? { moldId: null, type: null });
 }
 
-/** Miniatura de un molde: su foto real o la ilustración. */
+/** Miniatura de un molde: su foto real o "en preparación". */
 function MoldThumb({ moldId }: { moldId: string | null }) {
   const look = useLookup();
   const mold = moldId ? look.mold.get(moldId) : undefined;
   if (!mold) return <span className="piece-thumb piece-any">🎁</span>;
   const photo = coverPhoto(mold);
   if (photo) return <img className="piece-thumb" src={photo.url} alt="" />;
-  const colorId = displayColorId(mold);
   return (
     <span className="piece-thumb">
-      <Stage bare mold={mold} type="jabon" color={look.color.get(colorId)?.hex ?? '#f5a3c0'} colorId={colorId} plate={null} veinColor={null} />
+      <PhotoPending small />
     </span>
   );
 }

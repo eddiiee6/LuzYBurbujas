@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useCatalog, useLookup } from '../data/CatalogContext';
-import { Stage } from '../components/Stage';
+import { PhotoPending } from '../components/PhotoPending';
 import { photosFor } from '../lib/gallery';
 import { describeItem, isDesign, itemExists, itemPrice, useCart, whatsappLink, type Customer } from '../lib/cart';
 import { money } from '../lib/rules';
@@ -78,14 +78,11 @@ export default function Order() {
             );
           }
           const mold = look.mold.get(it.moldId)!;
-          const plate = it.plateId ? (look.plate.get(it.plateId) ?? null) : null;
           const params = new URLSearchParams({
             molde: mold.slug,
             tipo: it.type,
             color: it.colorId,
             placa: it.plateId ?? 'ninguna',
-            ...(it.veinColor ? { veta: it.veinColor.replace('#', '') } : {}),
-            ...(it.plateColorId ? { colorplaca: it.plateColorId } : {}),
             ...(it.essenceId ? { esencia: it.essenceId } : {}),
           });
           return (
@@ -94,16 +91,7 @@ export default function Order() {
                 {photosFor(mold, it.plateId, it.type, it.colorId)[0] ? (
                   <img src={photosFor(mold, it.plateId, it.type, it.colorId)[0].url} alt="" />
                 ) : (
-                <Stage
-                    mold={mold}
-                    type={it.type}
-                    color={look.color.get(it.colorId)?.hex ?? '#fff'}
-                    colorId={it.colorId}
-                    plate={plate}
-                    veinColor={it.veinColor}
-                    plateColor={it.plateColorId ? look.color.get(it.plateColorId)?.hex : null}
-                    theme={look.collection.get(mold.collectionId)?.theme}
-                  />
+                  <PhotoPending small />
                 )}
               </Link>
               <div className="order-info">
