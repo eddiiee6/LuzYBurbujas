@@ -2,7 +2,7 @@ import type { Arrangement, ArrangementPiece, Catalog, Collection, ColorOption, E
 import { useState } from 'react';
 import { plateFits, plateKindLabel, plateTypes } from '../lib/rules';
 import { photosFor } from '../lib/gallery';
-import { Check, ColorInput, Field, Num, PhotoList, Select, Text, slugify } from './fields';
+import { Check, ColorInput, Field, Num, PhotoList, Select, SinglePhoto, Text, slugify } from './fields';
 import { prepareCutout } from '../lib/image';
 import { friendlyError, repo } from '../data/repo';
 import { FitPhoto } from '../components/FitPhoto';
@@ -150,6 +150,11 @@ export function PlateEditor({ item, set, catalog }: Ed<Plate>) {
           <Num step={1} value={item.price} onChange={(v) => set({ price: v ?? 0 })} />
         </Field>
       </div>
+      <fieldset className="afit">
+        <legend>📷 Foto de la presentación</legend>
+        <small>Se muestra en el catálogo, en la sección "Presentaciones". Puede ser la presentación sola o con un producto de ejemplo.</small>
+        <SinglePhoto value={item.photo} name={`presentacion-${item.id}`} onChange={(photo) => set({ photo })} />
+      </fieldset>
       <Field label="Se ofrece para" hint="Por defecto: placas para jabones, contenedores para velas; cajitas y tarjetas para los dos.">
         <div className="row2">
           {(['vela', 'jabon'] as const).map((t) => (
